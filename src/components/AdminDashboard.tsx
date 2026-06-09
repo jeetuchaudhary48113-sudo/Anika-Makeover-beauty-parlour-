@@ -194,10 +194,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Fetch lists upon mount OR toggle auth
   useEffect(() => {
-    if (currentUser || sandboxBypass || isAdminAuth) {
+    if (isAdminAuth) {
       loadAllAdminData();
     }
-  }, [currentUser, sandboxBypass, isAdminAuth]);
+  }, [isAdminAuth]);
 
   const loadAllAdminData = async () => {
     try {
@@ -503,7 +503,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="bg-neutral-900 text-neutral-100 min-h-screen font-sans selection:bg-amber-500 selection:text-neutral-950">
       
       {/* 1. SECURE ADMIN CREDENTIALS GATE */}
-      {!(isAdminAuth || currentUser || sandboxBypass) ? (
+      {!isAdminAuth ? (
         <section className="min-h-[85vh] flex items-center justify-center p-4">
           <div className="bg-neutral-950 border border-neutral-800 rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
             <div className="bg-gradient-to-tr from-amber-500 to-yellow-300 p-3.5 rounded-2xl w-fit mx-auto shadow-inner text-neutral-950">
