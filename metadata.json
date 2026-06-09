@@ -1,0 +1,6 @@
+{
+  "name": "Anika Makeover Salon",
+  "description": "Premium luxury salon and beauty parlour website featuring personalized appointments, a dynamic gallery, curated services, customer feedback reviews, and a complete admin dashboard manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

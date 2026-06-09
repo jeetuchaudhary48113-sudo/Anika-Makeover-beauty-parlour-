@@ -1,0 +1,194 @@
+{
+  "entities": {
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Information about a service booking request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "phone": { "type": "string" },
+        "serviceId": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["fullName", "phone", "serviceId", "date", "time"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Details of a premium treatment or beauty option offered by the salon",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "description": { "type": "string" },
+        "benefits": { "type": "string" },
+        "price": { "type": "number" },
+        "image": { "type": "string" },
+        "category": { "type": "string" },
+        "duration": { "type": "string" }
+      },
+      "required": ["name", "description", "price", "image"]
+    },
+    "GalleryItem": {
+      "title": "GalleryItem",
+      "description": "Before & After or high-quality showcase images",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["bridal", "hair", "makeup", "transformation"] },
+        "image": { "type": "string" },
+        "beforeImage": { "type": "string" },
+        "isBeforeAfter": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["category", "image"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A customer rating and feedback",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "rating": { "type": "number" },
+        "text": { "type": "string" },
+        "avatar": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "rating", "text"]
+    },
+    "Banners": {
+      "title": "Banners",
+      "description": "Welcome and promotional configurations of banners",
+      "type": "object",
+      "properties": {
+        "heroHeading": { "type": "string" },
+        "heroSubheading": { "type": "string" },
+        "heroBgImage": { "type": "string" },
+        "promoBridalTitle": { "type": "string" },
+        "promoBridalDesc": { "type": "string" },
+        "promoBridalImage": { "type": "string" },
+        "promoHairTitle": { "type": "string" },
+        "promoHairDesc": { "type": "string" },
+        "promoHairImage": { "type": "string" },
+        "promoPackageTitle": { "type": "string" },
+        "promoPackageDesc": { "type": "string" },
+        "promoPackageImage": { "type": "string" }
+      },
+      "required": ["heroHeading", "heroSubheading"]
+    },
+    "Owner": {
+      "title": "Owner",
+      "description": "Anika's owner story and presentation details",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "experience": { "type": "string" },
+        "photo": { "type": "string" },
+        "biography": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["name", "experience", "biography"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global website settings, announcement bar, and meta SEO parameters",
+      "type": "object",
+      "properties": {
+        "websiteName": { "type": "string" },
+        "announcement": { "type": "string" },
+        "announcementVisible": { "type": "boolean" },
+        "metaTitle": { "type": "string" },
+        "metaDesc": { "type": "string" },
+        "businessHours": { "type": "string" }
+      },
+      "required": ["websiteName", "announcement"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "Salon geolocation links and phone numbers",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "address": { "type": "string" },
+        "mapsUrl": { "type": "string" },
+        "directionsUrl": { "type": "string" }
+      },
+      "required": ["phone", "whatsapp", "address"]
+    },
+    "SocialLinks": {
+      "title": "SocialLinks",
+      "description": "Curated external URLs for the brand",
+      "type": "object",
+      "properties": {
+        "googleReviewsUrl": { "type": "string" },
+        "instagram": { "type": "string" }
+      },
+      "required": ["instagram"]
+    },
+    "Offer": {
+      "title": "Offer",
+      "description": "Seasonal package discount offers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "discountCode": { "type": "string" },
+        "discountPercentage": { "type": "number" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["title", "description"]
+    }
+  },
+  "firestore": {
+    "appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Customer bookings"
+    },
+    "services/{serviceId}": {
+      "schema": "Service",
+      "description": "Salon services list"
+    },
+    "gallery/{galleryId}": {
+      "schema": "GalleryItem",
+      "description": "Before/After and gallery transformations showcase"
+    },
+    "reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Salon user testimonials and ratings"
+    },
+    "banners/main": {
+      "schema": "Banners",
+      "description": "Hero and promotional banner edits"
+    },
+    "owner/info": {
+      "schema": "Owner",
+      "description": "Owner detailed bio and message"
+    },
+    "settings/global": {
+      "schema": "Settings",
+      "description": "General settings and announcement bar"
+    },
+    "contact/info": {
+      "schema": "Contact",
+      "description": "Salon phone numbers, maps, and geolocation descriptions"
+    },
+    "socialLinks/main": {
+      "schema": "SocialLinks",
+      "description": "Social channels metadata"
+    },
+    "offers/{offerId}": {
+      "schema": "Offer",
+      "description": "Seasonal promotional discount codes"
+    }
+  }
+}

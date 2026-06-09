@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global safety net - Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+             request.auth.token.email == "jeetuchoudhary48113@gmail.com" &&
+             request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // A. Appointments Collection Rule
+    function isValidAppointment(data) {
+      return data.fullName is string && data.fullName.size() <= 150 &&
+             data.phone is string && data.phone.size() <= 30 &&
+             data.serviceId is string && data.serviceId.size() <= 100 &&
+             data.serviceName is string && data.serviceName.size() <= 150 &&
+             data.status == 'pending';
+    }
+
+    match /appointments/{appointmentId} {
+      allow create: if isValidId(appointmentId) && isValidAppointment(request.resource.data);
+      allow read, list, delete: if isAdmin();
+      allow update: if isAdmin() && 
+                     request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) &&
+                     (request.resource.data.status == 'accepted' || request.resource.data.status == 'rejected' || request.resource.data.status == 'pending');
+    }
+
+    // B. Services Collection Rule
+    function isValidService(data) {
+      return data.name is string && data.name.size() <= 205 &&
+             data.price is number && data.price >= 0;
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(serviceId) && isValidService(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // C. Gallery Collection Rule
+    match /gallery/{galleryId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(galleryId);
+    }
+
+    // D. Reviews Collection Rule
+    function isValidReview(data) {
+      return data.name is string && data.name.size() <= 100 &&
+             data.text is string && data.text.size() <= 1005 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isValidId(reviewId) && isValidReview(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // E. Banners configuration
+    match /banners/{bannerDoc} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(bannerDoc);
+    }
+
+    // F. Owner profile info
+    match /owner/{ownerDoc} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(ownerDoc);
+    }
+
+    // G. Settings info
+    match /settings/{settingsDoc} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(settingsDoc);
+    }
+
+    // H. Contact info
+    match /contact/{contactDoc} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(contactDoc);
+    }
+
+    // I. Social links
+    match /socialLinks/{socialDoc} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(socialDoc);
+    }
+
+    // J. Offers Collection Rule
+    function isValidOffer(data) {
+      return data.title is string && data.title.size() <= 150 &&
+             data.discountCode is string && data.discountCode.size() <= 50;
+    }
+
+    match /offers/{offerId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidId(offerId) && isValidOffer(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
