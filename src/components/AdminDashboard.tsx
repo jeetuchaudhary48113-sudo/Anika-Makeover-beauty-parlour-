@@ -36,7 +36,8 @@ import {
   Eye,
   EyeOff,
   Sliders,
-  Type
+  Type,
+  Loader2
 } from 'lucide-react';
 import { auth, isMockFirebase } from '../lib/firebase';
 import { 
@@ -83,6 +84,7 @@ import {
 } from '../lib/db';
 import { hashPassword, isSessionAuthenticated, setSessionAuthenticated } from '../lib/auth';
 import { DirectFileUploader } from './DirectFileUploader';
+import { AdvancedImageUploader } from './AdvancedImageUploader';
 
 interface AdminDashboardProps {
   initialSettings: Settings;
@@ -181,6 +183,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newOCode, setNewOCode] = useState("");
   const [newODiscount, setNewODiscount] = useState(15);
   const [newOImage, setNewOImage] = useState("");
+
+  // Loading indicator states per user's "SAVE FUNCTION REQUIREMENTS"
+  const [savingBuilder, setSavingBuilder] = useState(false);
+  const [savingConfigs, setSavingConfigs] = useState(false);
+  const [savingService, setSavingService] = useState(false);
+  const [savingGallery, setSavingGallery] = useState(false);
+  const [savingReview, setSavingReview] = useState(false);
+  const [savingOffer, setSavingOffer] = useState(false);
+
+  // Success indicator message states
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
 
   // Track Firebase login checks
@@ -324,72 +345,121 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleSaveBuilder = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateWelcomeBanner(editableWelcomeBanner);
-    await updateVisualBuilder(editableVisualBuilder);
-    alert("🎨 Visual Design & Sections updated instantly!");
-    onRefreshData();
+    setSavingBuilder(true);
+    try {
+      await updateWelcomeBanner(editableWelcomeBanner);
+      await updateVisualBuilder(editableVisualBuilder);
+      setToastType('success');
+      setToastMessage("🎨 Visual design layout and sections have been updated and synced instantly!");
+      onRefreshData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to save visual layout: " + (err?.message || err));
+    } finally {
+      setSavingBuilder(false);
+    }
   };
 
   // Appointment states setters
   const changeApptStatus = async (id: string, s: 'accepted' | 'rejected') => {
-    await updateAppointmentStatus(id, s);
-    loadAllAdminData();
+    try {
+      await updateAppointmentStatus(id, s);
+      setToastType('success');
+      setToastMessage(`Appointment log status changed to ${s}!`);
+      loadAllAdminData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to update status: " + (err?.message || err));
+    }
   };
 
   const handleRemoveAppt = async (id: string) => {
     if (confirm("Permanently delete this appointment booking log?")) {
-      await deleteAppointment(id);
-      loadAllAdminData();
+      try {
+        await deleteAppointment(id);
+        setToastType('success');
+        setToastMessage("Appointment record removed successfully.");
+        loadAllAdminData();
+      } catch (err: any) {
+        setToastType('error');
+        setToastMessage("Failed to delete appointment: " + (err?.message || err));
+      }
     }
   };
 
   // Website Settings Submit
   const handleSaveConfigs = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateSettings(editableSettings);
-    await updateContact(editableContact);
-    await updateBanners(editableBanners);
-    await updateOwner(editableOwner);
-    await updateSocialLinks(editableSocial);
-    alert("✨ Luxury portal settings persisted successfully!");
-    onRefreshData();
+    setSavingConfigs(true);
+    try {
+      await updateSettings(editableSettings);
+      await updateContact(editableContact);
+      await updateBanners(editableBanners);
+      await updateOwner(editableOwner);
+      await updateSocialLinks(editableSocial);
+      setToastType('success');
+      setToastMessage("✨ All dynamic luxury settings have been saved and applied website-wide!");
+      onRefreshData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to save settings: " + (err?.message || err));
+    } finally {
+      setSavingConfigs(false);
+    }
   };
 
   // Add Service list
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSName || !newSDesc || !newSImage) {
-      alert("Please provide service name, description and image link.");
+      alert("Please provide service name, description and image.");
       return;
     }
-    await addService({
-      name: newSName,
-      subtitle: newSSub || "Premium styling routine",
-      description: newSDesc,
-      benefits: newSBenefit || "Silky flow, Premium style, Fresh confidence",
-      price: Number(newSPrice),
-      image: newSImage,
-      category: newSCat,
-      duration: newSDuration
-    });
-    // Reset forms
-    setNewSName("");
-    setNewSSub("");
-    setNewSDesc("");
-    setNewSBenefit("");
-    setNewSPrice(500);
-    setNewSDuration("45 Mins");
-    setNewSImage("");
-    setShowAddService(false);
-    loadAllAdminData();
-    onRefreshData();
+    setSavingService(true);
+    try {
+      await addService({
+        name: newSName,
+        subtitle: newSSub || "Premium styling routine",
+        description: newSDesc,
+        benefits: newSBenefit || "Silky flow, Premium style, Fresh confidence",
+        price: Number(newSPrice),
+        image: newSImage,
+        category: newSCat,
+        duration: newSDuration
+      });
+      // Reset forms
+      setNewSName("");
+      setNewSSub("");
+      setNewSDesc("");
+      setNewSBenefit("");
+      setNewSPrice(500);
+      setNewSDuration("45 Mins");
+      setNewSImage("");
+      setShowAddService(false);
+      setToastType('success');
+      setToastMessage("💇 New elite service added and published live!");
+      loadAllAdminData();
+      onRefreshData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to add service: " + (err?.message || err));
+    } finally {
+      setSavingService(false);
+    }
   };
 
   const handleRemoveService = async (id: string) => {
     if (confirm("Are you sure you want to delete this service?")) {
-      await deleteService(id);
-      loadAllAdminData();
-      onRefreshData();
+      try {
+        await deleteService(id);
+        setToastType('success');
+        setToastMessage("Service deleted and removed instantly.");
+        loadAllAdminData();
+        onRefreshData();
+      } catch (err: any) {
+        setToastType('error');
+        setToastMessage("Failed to delete service: " + (err?.message || err));
+      }
     }
   };
 
@@ -397,30 +467,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleCreateGallery = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGImage || !newGTitle) {
-      alert("Title and image links are required.");
+      alert("Title and image are required.");
       return;
     }
-    await addGalleryItem({
-      title: newGTitle,
-      category: newGCat,
-      image: newGImage,
-      beforeImage: newGBeforeImage || undefined,
-      isBeforeAfter: newGIsBA
-    });
-    setNewGTitle("");
-    setNewGImage("");
-    setNewGBeforeImage("");
-    setNewGIsBA(false);
-    setShowAddGallery(false);
-    loadAllAdminData();
-    onRefreshData();
+    setSavingGallery(true);
+    try {
+      await addGalleryItem({
+        title: newGTitle,
+        category: newGCat,
+        image: newGImage,
+        beforeImage: newGBeforeImage || undefined,
+        isBeforeAfter: newGIsBA
+      });
+      setNewGTitle("");
+      setNewGImage("");
+      setNewGBeforeImage("");
+      setNewGIsBA(false);
+      setShowAddGallery(false);
+      setToastType('success');
+      setToastMessage("📸 Gallery work portfolio expanded successfully!");
+      loadAllAdminData();
+      onRefreshData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to add gallery item: " + (err?.message || err));
+    } finally {
+      setSavingGallery(false);
+    }
   };
 
   const handleRemoveGallery = async (id: string) => {
     if (confirm("Delete photo from gallery collection?")) {
-      await deleteGalleryItem(id);
-      loadAllAdminData();
-      onRefreshData();
+      try {
+        await deleteGalleryItem(id);
+        setToastType('success');
+        setToastMessage("Gallery item removed successfully.");
+        loadAllAdminData();
+        onRefreshData();
+      } catch (err: any) {
+        setToastType('error');
+        setToastMessage("Failed to delete gallery item: " + (err?.message || err));
+      }
     }
   };
 
@@ -431,27 +518,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       alert("Name and testimonial description are requested.");
       return;
     }
-    await addReview({
-      name: newRName,
-      rating: newRRating,
-      text: newRText,
-      avatar: newRAvatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
-      createdAt: new Date().toISOString().split('T')[0]
-    });
-    setNewRName("");
-    setNewRText("");
-    setNewRRating(5);
-    setNewRAvatar("");
-    setShowAddReview(false);
-    loadAllAdminData();
-    onRefreshData();
+    setSavingReview(true);
+    try {
+      await addReview({
+        name: newRName,
+        rating: newRRating,
+        text: newRText,
+        avatar: newRAvatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80",
+        createdAt: new Date().toISOString().split('T')[0]
+      });
+      setNewRName("");
+      setNewRText("");
+      setNewRRating(5);
+      setNewRAvatar("");
+      setShowAddReview(false);
+      setToastType('success');
+      setToastMessage("⭐ Testimonial rating registered and visible on client reviews!");
+      loadAllAdminData();
+      onRefreshData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to add testimonial: " + (err?.message || err));
+    } finally {
+      setSavingReview(false);
+    }
   };
 
   const handleRemoveReview = async (id: string) => {
     if (confirm("Delete customer reviews entry?")) {
-      await deleteReview(id);
-      loadAllAdminData();
-      onRefreshData();
+      try {
+        await deleteReview(id);
+        setToastType('success');
+        setToastMessage("Review log wiped successfully.");
+        loadAllAdminData();
+        onRefreshData();
+      } catch (err: any) {
+        setToastType('error');
+        setToastMessage("Failed to delete review: " + (err?.message || err));
+      }
     }
   };
 
@@ -462,28 +566,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       alert("Offer fields are mandatory.");
       return;
     }
-    await addOffer({
-      title: newOTitle,
-      description: newODesc,
-      discountCode: newOCode.toUpperCase(),
-      discountPercentage: Number(newODiscount),
-      imageUrl: newOImage || "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=400&q=80"
-    });
-    setNewOTitle("");
-    setNewODesc("");
-    setNewOCode("");
-    setNewODiscount(15);
-    setNewOImage("");
-    setShowAddOffer(false);
-    loadAllAdminData();
-    onRefreshData();
-  };
-
-  const handleRemoveOffer = async (id: string) => {
-    if (confirm("Delete this coupon promo offer?")) {
-      await deleteOffer(id);
+    setSavingOffer(true);
+    try {
+      await addOffer({
+        title: newOTitle,
+        description: newODesc,
+        discountCode: newOCode.toUpperCase(),
+        discountPercentage: Number(newODiscount),
+        imageUrl: newOImage || "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=400&q=80"
+      });
+      setNewOTitle("");
+      setNewODesc("");
+      setNewOCode("");
+      setNewODiscount(15);
+      setNewOImage("");
+      setShowAddOffer(false);
+      setToastType('success');
+      setToastMessage("🎁 Exclusive coupon details activated and displayed live!");
       loadAllAdminData();
       onRefreshData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to create promo offer: " + (err?.message || err));
+    } finally {
+      setSavingOffer(false);
+    }
+  };
+  const handleRemoveOffer = async (id: string) => {
+    if (confirm("Delete this coupon promo offer?")) {
+      try {
+        await deleteOffer(id);
+        setToastType('success');
+        setToastMessage("Coupon offer removed successfully.");
+        loadAllAdminData();
+        onRefreshData();
+      } catch (err: any) {
+        setToastType('error');
+        setToastMessage("Failed to delete promo offer: " + (err?.message || err));
+      }
     }
   };
 
@@ -653,21 +773,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </form>
             )}
 
-            <div className="pt-2 border-t border-neutral-900/60 flex flex-col gap-2">
-              <button
-                onClick={handleGoogleLogin}
-                className="w-full py-2.5 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:text-white text-neutral-400 text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span>Google Account Auth Flow</span>
-              </button>
-
-              <button
-                onClick={() => setSandboxBypass(true)}
-                className="w-full py-2 bg-transparent text-[11px] text-neutral-600 hover:text-neutral-400 transition-all cursor-pointer font-mono uppercase tracking-wider"
-              >
-                Activate Local Guest Sandbox
-              </button>
-            </div>
+            {/* Auth options backdoors removed for security */}
             
           </div>
         </section>
@@ -819,12 +925,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   {/* Direct File System Assets (Image and Video Uploads) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <DirectFileUploader 
+                    <AdvancedImageUploader 
                       label="Upload Background Image Backdrop"
                       accept="image/*"
                       folder="banners"
                       currentValue={editableWelcomeBanner.bgImage || ''}
                       onUploadComplete={(url) => setEditableWelcomeBanner(prev => ({ ...prev, bgImage: url, bgVideo: '' }))}
+                      aspectRatio="16:9"
                     />
                     <DirectFileUploader 
                       label="Upload Background Video Stream"
@@ -1276,7 +1383,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                     {/* Background Hero Asset direct upload */}
                     <div className="pt-2">
-                      <DirectFileUploader 
+                      <AdvancedImageUploader 
                         label="Primary Hero Backdrop Image" 
                         accept="image/*" 
                         folder="hero"
@@ -1285,6 +1392,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           ...prev,
                           sectionsText: { ...prev.sectionsText, heroBgImage: url }
                         }))}
+                        aspectRatio="16:9"
                       />
                     </div>
                   </div>
@@ -1322,7 +1430,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                     {/* Bridal background asset upload */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                      <DirectFileUploader 
+                      <AdvancedImageUploader 
                         label="Exclusive Bridal Highlights Cover Photo" 
                         accept="image/*" 
                         folder="sections"
@@ -1331,8 +1439,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           ...prev,
                           sectionsText: { ...prev.sectionsText, combosBridalBg: url }
                         }))}
+                        aspectRatio="4:3"
                       />
-                      <DirectFileUploader 
+                      <AdvancedImageUploader 
                         label="Transformation Highlights Cover Photo" 
                         accept="image/*" 
                         folder="sections"
@@ -1341,6 +1450,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           ...prev,
                           sectionsText: { ...prev.sectionsText, combosTransformBg: url }
                         }))}
+                        aspectRatio="4:3"
                       />
                     </div>
                   </div>
@@ -1415,7 +1525,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           className="w-full px-3.5 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-neutral-200 text-xs focus:outline-none focus:border-amber-500"
                         />
                       </div>
-                      <DirectFileUploader 
+                      <AdvancedImageUploader 
                         label="Director Professional Photo portrait" 
                         accept="image/*" 
                         folder="about"
@@ -1424,6 +1534,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           ...prev,
                           sectionsText: { ...prev.sectionsText, aboutBgImage: url }
                         }))}
+                        aspectRatio="1:1"
                       />
                     </div>
                   </div>
@@ -1433,10 +1544,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="flex justify-end gap-3 p-4 bg-neutral-950 border border-neutral-850 rounded-2xl">
                   <button
                     type="submit"
-                    className="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl shadow-lg shadow-amber-500/10 cursor-pointer flex items-center gap-1.5"
+                    disabled={savingBuilder}
+                    className="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl shadow-lg shadow-amber-500/10 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
                   >
-                    <Check size={14} />
-                    <span>Publish Visual Builder Live Settings</span>
+                    {savingBuilder ? <Loader2 size={14} className="animate-spin text-neutral-950" /> : <Check size={14} />}
+                    <span>{savingBuilder ? 'Publishing layouts...' : 'Publish Visual Builder Live Settings'}</span>
                   </button>
                 </div>
               </form>
@@ -1682,11 +1794,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-bold text-neutral-400">Treatment Image URL *</label>
-                      <input 
-                        type="url" value={newSImage} onChange={(e) => setNewSImage(e.target.value)}
-                        className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-200"
-                        placeholder="Unsplash URL" required
+                      <AdvancedImageUploader 
+                        label="Treatment Image *"
+                        accept="image/*"
+                        folder="services"
+                        currentValue={newSImage}
+                        onUploadComplete={(url) => setNewSImage(url)}
+                        aspectRatio="1:1"
                       />
                     </div>
 
@@ -1827,15 +1941,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] uppercase font-bold text-neutral-400">Primary Mirror Image URL *</label>
-                      <input 
-                        type="url" value={newGImage} onChange={(e) => setNewGImage(e.target.value)}
-                        className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-xs"
-                        placeholder="https://...." required
+                      <AdvancedImageUploader
+                        label="Primary Mirror Image *"
+                        accept="image/*"
+                        folder="gallery"
+                        currentValue={newGImage}
+                        onUploadComplete={(url) => setNewGImage(url)}
+                        aspectRatio="4:3"
                       />
                     </div>
 
-                    <div className="space-y-3 pt-4">
+                    <div className="space-y-3 pt-4 col-span-2">
                       <div className="flex items-center gap-2">
                         <input 
                           type="checkbox" checked={newGIsBA} onChange={(e) => setNewGIsBA(e.target.checked)}
@@ -1849,11 +1965,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                     {newGIsBA && (
                       <div className="col-span-2 space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-neutral-450">Before Stage Image URL</label>
-                        <input 
-                          type="url" value={newGBeforeImage} onChange={(e) => setNewGBeforeImage(e.target.value)}
-                          className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-xs"
-                          placeholder="Link to previous style"
+                        <AdvancedImageUploader
+                          label="Before Stage Image"
+                          accept="image/*"
+                          folder="gallery"
+                          currentValue={newGBeforeImage}
+                          onUploadComplete={(url) => setNewGBeforeImage(url)}
+                          aspectRatio="4:3"
                         />
                       </div>
                     )}
@@ -1957,11 +2075,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-neutral-400">Promo Banner/Cover Link</label>
-                    <input 
-                      type="url" value={newOImage} onChange={(e) => setNewOImage(e.target.value)}
-                      className="w-full px-3 py-2 bg-neutral-900 border border-neutral-850 rounded-xl text-xs"
-                      placeholder="Unsplash portrait URL"
+                    <AdvancedImageUploader
+                      label="Promo Banner/Cover Image"
+                      accept="image/*"
+                      folder="offers"
+                      currentValue={newOImage}
+                      onUploadComplete={(url) => setNewOImage(url)}
+                      aspectRatio="16:9"
                     />
                   </div>
 
@@ -2055,6 +2175,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         value={newRText} onChange={(e) => setNewRText(e.target.value)}
                         className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-xs h-16"
                         placeholder="The facial service was exceptional..." required
+                      />
+                    </div>
+
+                    <div className="col-span-2 space-y-1">
+                      <AdvancedImageUploader
+                        label="Guest Profile Avatar Photo"
+                        accept="image/*"
+                        folder="avatars"
+                        currentValue={newRAvatar}
+                        onUploadComplete={(url) => setNewRAvatar(url)}
+                        aspectRatio="1:1"
                       />
                     </div>
                   </div>
@@ -2248,12 +2379,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
 
                   <div className="col-span-2 space-y-2">
-                    <label className="text-xs font-semibold text-neutral-400">Hero Screen Full Backdrop Image Link URL</label>
-                    <input 
-                      type="url" 
-                      value={editableBanners.heroBgImage}
-                      onChange={(e) => setEditableBanners({ ...editableBanners, heroBgImage: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs"
+                    <AdvancedImageUploader
+                      label="Hero Screen Full Backdrop Image"
+                      accept="image/*"
+                      folder="hero"
+                      currentValue={editableBanners.heroBgImage}
+                      onUploadComplete={(url) => setEditableBanners({ ...editableBanners, heroBgImage: url })}
+                      aspectRatio="16:9"
                     />
                   </div>
 
@@ -2270,12 +2402,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-neutral-400">Bridal Image Link</label>
-                    <input 
-                      type="url" 
-                      value={editableBanners.promoBridalImage}
-                      onChange={(e) => setEditableBanners({ ...editableBanners, promoBridalImage: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs"
+                    <AdvancedImageUploader
+                      label="Bridal Image Backdrop"
+                      accept="image/*"
+                      folder="promo"
+                      currentValue={editableBanners.promoBridalImage}
+                      onUploadComplete={(url) => setEditableBanners({ ...editableBanners, promoBridalImage: url })}
+                      aspectRatio="4:3"
                     />
                   </div>
 
@@ -2322,12 +2455,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
 
                   <div className="col-span-2 space-y-2">
-                    <label className="text-xs font-semibold text-neutral-400">Director Photo Link (high resolution facial)</label>
-                    <input 
-                      type="url" 
-                      value={editableOwner.photo}
-                      onChange={(e) => setEditableOwner({ ...editableOwner, photo: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-300"
+                    <AdvancedImageUploader
+                      label="Director Photo (high resolution profile)"
+                      accept="image/*"
+                      folder="owner"
+                      currentValue={editableOwner.photo}
+                      onUploadComplete={(url) => setEditableOwner({ ...editableOwner, photo: url })}
+                      aspectRatio="1:1"
                     />
                   </div>
 
@@ -2357,16 +2491,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="flex items-center gap-4 py-4 select-none">
                 <button
                   type="submit"
-                  className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl hover:scale-[1.01] transition-transform cursor-pointer shadow-lg inline-flex items-center gap-2"
+                  disabled={savingConfigs}
+                  className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl hover:scale-[1.01] transition-transform cursor-pointer shadow-lg inline-flex items-center gap-2 disabled:opacity-50"
                 >
-                  <Check size={15} />
-                  <span>Persist Everything Live</span>
+                  {savingConfigs ? <Loader2 size={15} className="animate-spin text-neutral-950" /> : <Check size={15} />}
+                  <span>{savingConfigs ? 'Persisting changes...' : 'Persist Everything Live'}</span>
                 </button>
               </div>
 
             </form>
           )}
 
+        </div>
+      )}
+
+      {/* Premium Toast Notifications Container */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-55">
+          <div className={`px-5 py-3.5 text-xs font-semibold rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-md select-none ${
+            toastType === 'success' 
+              ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/20 shadow-emerald-950/50' 
+              : 'bg-red-950/90 text-red-300 border-red-500/20 shadow-red-950/50'
+          }`}>
+            <span className="text-sm">{toastType === 'success' ? '✨' : '⚠️'}</span>
+            <span>{toastMessage}</span>
+            <button 
+              onClick={() => setToastMessage(null)}
+              className="ml-3 text-[10px] text-neutral-450 hover:text-neutral-300 font-bold uppercase tracking-wider scale-[0.9] cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 

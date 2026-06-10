@@ -81,11 +81,11 @@ export async function uploadFile(file: File, folder: string = 'uploads'): Promis
     try {
       const storageRef = ref(storage, `${folder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`);
       
-      // Keep uploads ultra-responsive: if connection or bandwidth is slow, timeout after 1.5s
+      // Keep uploads responsive with a standard, generous timeout (e.g., 60 seconds)
       const snapshot = await Promise.race([
         uploadBytes(storageRef, processedBlob),
         new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Firebase Storage upload timed out after 1.5s')), 1500)
+          setTimeout(() => reject(new Error('Firebase Storage upload timed out after 60s')), 60000)
         )
       ]);
       
