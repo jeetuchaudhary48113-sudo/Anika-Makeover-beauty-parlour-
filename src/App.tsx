@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Crown } from 'lucide-react';
 
 // Components Imports
@@ -35,7 +35,8 @@ import {
   getReviews, 
   getOffers,
   getWelcomeBanner,
-  getVisualBuilder
+  getVisualBuilder,
+  getHeroBanner
 } from './lib/db';
 
 // Schema Interfaces
@@ -50,7 +51,8 @@ import {
   Review, 
   Offer,
   WelcomeBanner as WelcomeBannerType,
-  VisualBuilderSettings
+  VisualBuilderSettings,
+  HeroBanner as HeroBannerType
 } from './types';
 
 export default function App() {
@@ -64,6 +66,7 @@ export default function App() {
   const [owner, setOwner] = useState<Owner | null>(null);
   const [socialLinks, setSocialLinks] = useState<SocialLinks | null>(null);
   const [welcomeBanner, setWelcomeBanner] = useState<WelcomeBannerType | null>(null);
+  const [heroBanner, setHeroBanner] = useState<HeroBannerType | null>(null);
   const [visualBuilder, setVisualBuilder] = useState<VisualBuilderSettings | null>(null);
 
   // Dynamic Lists data
@@ -75,6 +78,7 @@ export default function App() {
   // Selection states (for details pre-fills)
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
   const [preselectedServiceIdForForm, setPreselectedServiceIdForForm] = useState<string | null>(null);
+  const [isPreviewActive, setIsPreviewActive] = useState(false);
 
   // Fetch all startup variables
   const loadInitialConfigs = async () => {
@@ -85,6 +89,7 @@ export default function App() {
       const dbOwner = await getOwner();
       const dbSocial = await getSocialLinks();
       const dbWelcomeBanner = await getWelcomeBanner();
+      const dbHeroBanner = await getHeroBanner();
       const dbVisualBuilder = await getVisualBuilder();
 
       const dbServices = await getServices();
@@ -98,12 +103,19 @@ export default function App() {
       setOwner(dbOwner);
       setSocialLinks(dbSocial);
       setWelcomeBanner(dbWelcomeBanner);
+      setHeroBanner(dbHeroBanner);
       setVisualBuilder(dbVisualBuilder);
 
-      setServices(dbServices);
-      setGalleryItems(dbGallery);
-      setReviews(dbReviews);
-      setOffers(dbOffers);
+      // Deduplicate arrays strictly by ID to prevent any duplicate customer-facing UI components
+      const uniqueServices = Array.from(new Map(dbServices.map(s => [s.id, s])).values());
+      const uniqueGallery = Array.from(new Map(dbGallery.map(g => [g.id, g])).values());
+      const uniqueReviews = Array.from(new Map(dbReviews.map(r => [r.id, r])).values());
+      const uniqueOffers = Array.from(new Map(dbOffers.map(o => [o.id, o])).values());
+
+      setServices(uniqueServices);
+      setGalleryItems(uniqueGallery);
+      setReviews(uniqueReviews);
+      setOffers(uniqueOffers);
     } catch (error) {
       console.error("Critical error building initial data collections", error);
     } finally {
@@ -159,7 +171,7 @@ export default function App() {
   };
 
   // 1. LOADING SCREEN STATE (GOLD PRELOADER)
-  if (loadingApp || !settings || !contact || !banners || !owner || !socialLinks || !welcomeBanner || !visualBuilder) {
+  if (loadingApp || !settings || !contact || !banners || !owner || !socialLinks || !welcomeBanner || !heroBanner || !visualBuilder) {
     return (
       <div className="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col justify-center items-center gap-6 select-none relative">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -184,7 +196,7 @@ export default function App() {
         <div className="flex items-center gap-2 mt-4 px-4 py-1.5 bg-neutral-900 border border-neutral-800 rounded-full">
           <Sparkles size={12} className="text-amber-500 animate-spin" />
           <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest">
-            Tasting Connection Authenticity...
+            Preparing Premium Experience...
           </span>
         </div>
       </div>
@@ -202,6 +214,24 @@ export default function App() {
         <WelcomeBanner banner={welcomeBanner} />
       )} */}
 
+      {/* 1.6. Real-time Preview Banner (Draft Toggles Bar) */}
+      {isPreviewActive && (
+        <div id="preview-banner" className="bg-amber-500 text-neutral-950 px-4 py-2.5 sm:py-3 font-semibold text-xs sm:text-xs text-center sticky top-0 z-50 shadow-2xl flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 select-none">
+          <span>🎨 <strong className="font-bold">Live Preview Active (Unsaved Changes):</strong> Inspecting style/layout adjustments dynamically before publication.</span>
+          <button
+            onClick={() => {
+              setIsPreviewActive(false);
+              loadInitialConfigs(); // restores clean Firestore values
+              setCurrentTab('admin');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="px-3.5 py-1.5 bg-neutral-950 text-amber-500 font-bold uppercase tracking-wider text-[10px] rounded-lg hover:bg-neutral-900 transition-all shadow cursor-pointer shrink-0"
+          >
+            Return to Editor &rarr;
+          </button>
+        </div>
+      )}
+
       {/* 2. Global Header Nav */}
       <Header 
         settings={settings} 
@@ -217,46 +247,74 @@ export default function App() {
         {currentTab === 'home' && (
           <div className="space-y-0">
             {visualBuilder?.sections && visualBuilder.sections.length > 0 ? (
-              visualBuilder.sections.map((sec: any) => (
-                <PageSectionSelector
-                  key={sec.id}
-                  section={sec}
-                  banners={banners}
-                  contact={contact}
-                  owner={owner}
-                  socialLinks={socialLinks}
-                  services={services}
-                  galleryItems={galleryItems}
-                  reviews={reviews}
-                  offers={offers}
-                  settings={settings}
-                  preselectedServiceIdForForm={preselectedServiceIdForForm}
-                  setPreselectedServiceIdForForm={setPreselectedServiceIdForForm}
-                  handleTabChange={handleTabChange}
-                  handleDirectFormPreBook={handleDirectFormPreBook}
-                  handleSelectServiceDetail={handleSelectServiceDetail}
-                  HeroComponent={Hero}
-                  PromotionalBannersComponent={PromotionalBanners}
-                  AboutAndOwnerComponent={AboutAndOwner}
-                  ServicesComponent={ServicesSection}
-                  GalleryComponent={GallerySection}
-                  InstagramReviewsStatsComponent={InstagramReviewsStats}
-                  AppointmentFormComponent={AppointmentForm}
-                  ContactMapComponent={ContactMap}
-                />
+              // DUPLICATE CONTENT DE-DUPLICATION: Filter sections to ensure unique section types (and combine owner/about)
+              (() => {
+                const seenTypes = new Set<string>();
+                return visualBuilder.sections.filter((sec: any) => {
+                  const type = sec.type;
+                  if (type === 'about' || type === 'owner') {
+                    if (seenTypes.has('about_owner_combined')) {
+                      return false;
+                    }
+                    seenTypes.add('about_owner_combined');
+                    return true;
+                  }
+                  if (['hero', 'offers', 'services', 'gallery', 'reviews', 'instagram', 'booking', 'contact'].includes(type)) {
+                    if (seenTypes.has(type)) {
+                      return false;
+                    }
+                    seenTypes.add(type);
+                    return true;
+                  }
+                  return true; // allow multiple custom sections
+                });
+              })().map((sec: any) => (
+                <React.Fragment key={sec.id}>
+                  <PageSectionSelector
+                    section={sec}
+                    banners={banners}
+                    heroBanner={heroBanner}
+                    contact={contact}
+                    owner={owner}
+                    socialLinks={socialLinks}
+                    services={services}
+                    galleryItems={galleryItems}
+                    reviews={reviews}
+                    offers={offers}
+                    settings={settings}
+                    preselectedServiceIdForForm={preselectedServiceIdForForm}
+                    setPreselectedServiceIdForForm={setPreselectedServiceIdForForm}
+                    handleTabChange={handleTabChange}
+                    handleDirectFormPreBook={handleDirectFormPreBook}
+                    handleSelectServiceDetail={handleSelectServiceDetail}
+                    HeroComponent={Hero}
+                    PromotionalBannersComponent={PromotionalBanners}
+                    AboutAndOwnerComponent={AboutAndOwner}
+                    ServicesComponent={ServicesSection}
+                    GalleryComponent={GallerySection}
+                    InstagramReviewsStatsComponent={InstagramReviewsStats}
+                    AppointmentFormComponent={AppointmentForm}
+                    ContactMapComponent={ContactMap}
+                  />
+                  {sec.type === 'hero' && welcomeBanner && welcomeBanner.visible && (
+                    <WelcomeBanner banner={welcomeBanner} />
+                  )}
+                </React.Fragment>
               ))
             ) : (
               <>
                 {/* Full Screen Premium Banner */}
                 <Hero 
-                  banners={banners} 
+                  heroBanner={heroBanner!} 
                   contact={contact} 
+                  socialLinks={socialLinks}
                   onBookClick={() => handleDirectFormPreBook(services[0]?.id || "")}
-                  onServicesClick={() => {
-                    const element = document.getElementById('services');
-                    if (element) element.scrollIntoView({ behavior: 'smooth' });
-                  }}
                 />
+
+                {/* New Welcome Banner Section Placed Directly Below Hero */}
+                {welcomeBanner && welcomeBanner.visible && (
+                  <WelcomeBanner banner={welcomeBanner} />
+                )}
 
                 {/* Promotional Highlights Bento Offers Cards */}
                 <PromotionalBanners 
@@ -317,11 +375,25 @@ export default function App() {
             initialSettings={settings}
             initialContact={contact}
             initialBanners={banners}
+            initialHeroBanner={heroBanner!}
             initialOwner={owner}
             initialSocialLinks={socialLinks}
             initialWelcomeBanner={welcomeBanner}
             initialVisualBuilder={visualBuilder}
             onRefreshData={loadInitialConfigs}
+            onTempPreview={(draft: any) => {
+              if (draft.settings) setSettings(draft.settings);
+              if (draft.contact) setContact(draft.contact);
+              if (draft.banners) setBanners(draft.banners);
+              if (draft.heroBanner) setHeroBanner(draft.heroBanner);
+              if (draft.owner) setOwner(draft.owner);
+              if (draft.socialLinks) setSocialLinks(draft.socialLinks);
+              if (draft.welcomeBanner) setWelcomeBanner(draft.welcomeBanner);
+              if (draft.visualBuilder) setVisualBuilder(draft.visualBuilder);
+              setIsPreviewActive(true);
+              setCurrentTab('home');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
         )}
 

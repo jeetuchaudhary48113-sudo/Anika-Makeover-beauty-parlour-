@@ -37,7 +37,8 @@ import {
   EyeOff,
   Sliders,
   Type,
-  Loader2
+  Loader2,
+  Crown
 } from 'lucide-react';
 import { auth, isMockFirebase } from '../lib/firebase';
 import { 
@@ -52,7 +53,8 @@ import {
   SocialLinks, 
   Offer,
   WelcomeBanner,
-  VisualBuilderSettings
+  VisualBuilderSettings,
+  HeroBanner
 } from '../types';
 import { VisualBuilderTab } from './VisualBuilderTab';
 import {
@@ -80,7 +82,9 @@ import {
   updateWelcomeBanner,
   updateVisualBuilder,
   getAdminPasswordHash,
-  updateAdminPasswordHash
+  updateAdminPasswordHash,
+  getHeroBanner,
+  updateHeroBanner
 } from '../lib/db';
 import { hashPassword, isSessionAuthenticated, setSessionAuthenticated } from '../lib/auth';
 import { DirectFileUploader } from './DirectFileUploader';
@@ -90,22 +94,26 @@ interface AdminDashboardProps {
   initialSettings: Settings;
   initialContact: Contact;
   initialBanners: Banners;
+  initialHeroBanner: HeroBanner;
   initialOwner: Owner;
   initialSocialLinks: SocialLinks;
   initialWelcomeBanner: WelcomeBanner;
   initialVisualBuilder: VisualBuilderSettings;
   onRefreshData: () => void;
+  onTempPreview?: (draft: any) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   initialSettings,
   initialContact,
   initialBanners,
+  initialHeroBanner,
   initialOwner,
   initialSocialLinks,
   initialWelcomeBanner,
   initialVisualBuilder,
-  onRefreshData
+  onRefreshData,
+  onTempPreview
 }) => {
   // Authentication states
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
@@ -131,7 +139,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
 
   // Active Tab state
-  const [activeSubTab, setActiveSubTab] = useState<'appointments' | 'services' | 'gallery' | 'settings' | 'offers' | 'reviews' | 'builder'>('appointments');
+  const [activeSubTab, setActiveSubTab] = useState<'appointments' | 'services' | 'gallery' | 'settings' | 'offers' | 'reviews' | 'builder' | 'heroWelcomeBanner'>('appointments');
 
   // Dynamic lists from storage
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -144,6 +152,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editableSettings, setEditableSettings] = useState<Settings>(initialSettings);
   const [editableContact, setEditableContact] = useState<Contact>(initialContact);
   const [editableBanners, setEditableBanners] = useState<Banners>(initialBanners);
+  const [editableHeroBanner, setEditableHeroBanner] = useState<HeroBanner>(initialHeroBanner);
   const [editableOwner, setEditableOwner] = useState<Owner>(initialOwner);
   const [editableSocial, setEditableSocial] = useState<SocialLinks>(initialSocialLinks);
   const [editableWelcomeBanner, setEditableWelcomeBanner] = useState<WelcomeBanner>(initialWelcomeBanner);
@@ -191,6 +200,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [savingGallery, setSavingGallery] = useState(false);
   const [savingReview, setSavingReview] = useState(false);
   const [savingOffer, setSavingOffer] = useState(false);
+  const [savingHeroBanner, setSavingHeroBanner] = useState(false);
 
   // Success indicator message states
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -343,6 +353,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const handleResetConfigs = () => {
+    if (confirm("Reset settings back to database configured values?")) {
+      setEditableSettings(initialSettings);
+      setEditableContact(initialContact);
+      setEditableBanners(initialBanners);
+      setEditableOwner(initialOwner);
+      setEditableSocial(initialSocialLinks);
+      setToastType('success');
+      setToastMessage("Reset settings form inputs back to the database-configured drafts!");
+    }
+  };
+
+  const handleResetBuilder = () => {
+    if (confirm("Reset current layout modifications back to database configurations?")) {
+      setEditableWelcomeBanner(initialWelcomeBanner);
+      setEditableVisualBuilder(initialVisualBuilder);
+      setToastType('success');
+      setToastMessage("Reset layout fields successfully!");
+    }
+  };
+
+  const handlePreviewConfigs = () => {
+    if (onTempPreview) {
+      onTempPreview({
+        settings: editableSettings,
+        contact: editableContact,
+        banners: editableBanners,
+        owner: editableOwner,
+        socialLinks: editableSocial
+      });
+    }
+  };
+
+  const handlePreviewBuilder = () => {
+    if (onTempPreview) {
+      onTempPreview({
+        welcomeBanner: editableWelcomeBanner,
+        visualBuilder: editableVisualBuilder
+      });
+    }
+  };
+
   const handleSaveBuilder = async (e: React.FormEvent) => {
     e.preventDefault();
     setSavingBuilder(true);
@@ -357,6 +409,34 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setToastMessage("Failed to save visual layout: " + (err?.message || err));
     } finally {
       setSavingBuilder(false);
+    }
+  };
+
+  const handleSaveHeroWelcome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingHeroBanner(true);
+    try {
+      await updateHeroBanner(editableHeroBanner);
+      await updateWelcomeBanner(editableWelcomeBanner);
+      setToastType('success');
+      setToastMessage("👑 Hero Section and Welcome Banner have been saved and synchronized with Firestore successfully!");
+      onRefreshData();
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to save Hero or Welcome Banner: " + (err?.message || err));
+    } finally {
+      setSavingHeroBanner(false);
+    }
+  };
+
+  const handlePreviewHeroWelcome = () => {
+    if (onTempPreview) {
+      onTempPreview({
+        heroBanner: editableHeroBanner,
+        welcomeBanner: editableWelcomeBanner
+      });
+      setToastType('success');
+      setToastMessage("📱 Live Sandbox draft preview updated! Review the landing page now.");
     }
   };
 
@@ -813,6 +893,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="flex flex-wrap items-center gap-2 border-b border-neutral-800 pb-2 select-none">
             {[
               { id: 'builder', label: 'Visual Website Builder', icon: <Sparkles size={13} /> },
+              { id: 'heroWelcomeBanner', label: 'Hero & Welcome Banner Manager', icon: <Crown size={13} /> },
               { id: 'appointments', label: 'Appointments Booked', icon: <Calendar size={13} /> },
               { id: 'services', label: 'Services Catalogue', icon: <BookOpen size={13} /> },
               { id: 'gallery', label: 'Gallery Portfolio', icon: <Image size={13} /> },
@@ -839,6 +920,291 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           
           {/* 3. SUBTAB CONTENT PANELS */}
           
+          {/* 3. SUBTAB CONTENT PANELS */}
+          
+          {/* HERO & WELCOME BANNER SECTION MANAGER */}
+          {activeSubTab === 'heroWelcomeBanner' && (
+            <div id="hero-welcome-manager-panel" className="space-y-8 animate-fadeIn">
+              
+              <div className="bg-gradient-to-r from-amber-500/10 via-neutral-950 to-neutral-950 p-6 rounded-3xl border border-amber-500/20 flex flex-col md:flex-row gap-5 items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Crown className="text-amber-400 animate-pulse" size={20} />
+                    <h3 className="font-serif font-bold text-xl text-neutral-100">Hero & Welcome Banner Manager</h3>
+                  </div>
+                  <p className="text-xs text-neutral-400 max-w-xl">
+                    Configure names, headings, subheadings, instant direct action links, call-to-actions, and upload high-resolution premium artwork directly from your device.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={handlePreviewHeroWelcome}
+                    className="px-5 py-2.5 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-800 text-neutral-200 text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Instant Live Preview</span>
+                  </button>
+
+                  <button
+                    onClick={handleSaveHeroWelcome}
+                    disabled={savingHeroBanner}
+                    className="px-6 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl transition-all shadow-lg hover:scale-[1.02] flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {savingHeroBanner ? (
+                      <Loader2 size={14} className="animate-spin text-neutral-950" />
+                    ) : (
+                      <Check size={14} />
+                    )}
+                    <span>{savingHeroBanner ? "Publishing..." : "Publish To Site"}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* A. HERO SECTION CONFIGURATION */}
+                <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 space-y-6">
+                  <div className="border-b border-neutral-900 pb-3 flex items-center gap-2">
+                    <Crown size={16} className="text-amber-400" />
+                    <div>
+                      <h4 className="font-serif font-bold text-base text-neutral-200">1. Hero Section Settings</h4>
+                      <p className="text-[11px] text-neutral-500">Configure visual items shown immediately upon entering the customer portal.</p>
+                    </div>
+                  </div>
+
+                  {/* Direct Image Upload for Hero Background Photo */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Hero Wallpaper Art Image</label>
+                    <DirectFileUploader
+                      label="Direct Device Image Upload"
+                      accept="image/*"
+                      folder="hero"
+                      currentValue={editableHeroBanner.heroBgImage}
+                      onUploadComplete={(url) => setEditableHeroBanner(prev => ({ ...prev, heroBgImage: url }))}
+                    />
+                    <p className="text-[10px] text-neutral-500">Upload high-quality landscape photo. Replaces background automatically.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Hero Heading */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Salon Main Brand / Heading Name</label>
+                      <input 
+                        type="text" 
+                        value={editableHeroBanner.heroHeading}
+                        onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroHeading: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:border-amber-500/50 focus:outline-none transition-colors"
+                        placeholder="Anika Makeover Salon"
+                        required
+                      />
+                    </div>
+
+                    {/* Hero Subtitle */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Slogan / Elevational Subheading</label>
+                      <textarea
+                        value={editableHeroBanner.heroSubheading}
+                        onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroSubheading: e.target.value }))}
+                        className="w-full px-4 py-2.5 h-20 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:border-amber-500/50 focus:outline-none transition-colors resize-none"
+                        placeholder="Where Luxury Meets Beauty & Elegant Styling"
+                        required
+                      />
+                    </div>
+
+                    {/* Hero Button 1: Appointment */}
+                    <div className="border-t border-neutral-900 pt-4 space-y-3">
+                      <h5 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Button 1: Book Appointment Controls</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 block">
+                          <label className="text-[10px] text-neutral-500 block">Button Text</label>
+                          <input 
+                            type="text" 
+                            value={editableHeroBanner.heroBtnAppointmentText}
+                            onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroBtnAppointmentText: e.target.value }))}
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-300"
+                            placeholder="Book Appointment"
+                          />
+                        </div>
+                        <div className="space-y-1 block">
+                          <label className="text-[10px] text-neutral-500 block">Anchor ID Target / Link</label>
+                          <input 
+                            type="text" 
+                            value={editableHeroBanner.heroBtnAppointmentLink}
+                            onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroBtnAppointmentLink: e.target.value }))}
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-300"
+                            placeholder="#booking"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Hero Button 2: WhatsApp */}
+                    <div className="border-t border-neutral-900 pt-4 space-y-3">
+                      <h5 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Button 2: WhatsApp Controls</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 block">
+                          <label className="text-[10px] text-neutral-500 block">Button Text</label>
+                          <input 
+                            type="text" 
+                            value={editableHeroBanner.heroBtnWhatsAppText}
+                            onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroBtnWhatsAppText: e.target.value }))}
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-300"
+                            placeholder="WhatsApp"
+                          />
+                        </div>
+                        <div className="space-y-1 block">
+                          <label className="text-[10px] text-neutral-500 block">Custom Link or Phone Number</label>
+                          <input 
+                            type="text" 
+                            value={editableHeroBanner.heroBtnWhatsAppLink}
+                            onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroBtnWhatsAppLink: e.target.value }))}
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-300"
+                            placeholder="e.g. https://wa.me/91XXXXXXXXXX"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Hero Button 3: Instagram */}
+                    <div className="border-t border-neutral-900 pt-4 space-y-3">
+                      <h5 className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Button 3: Instagram Controls</h5>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1 block">
+                          <label className="text-[10px] text-neutral-500 block">Button Text</label>
+                          <input 
+                            type="text" 
+                            value={editableHeroBanner.heroBtnInstagramText}
+                            onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroBtnInstagramText: e.target.value }))}
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-300"
+                            placeholder="Instagram"
+                          />
+                        </div>
+                        <div className="space-y-1 block">
+                          <label className="text-[10px] text-neutral-500 block">Custom Instagram URL</label>
+                          <input 
+                            type="text" 
+                            value={editableHeroBanner.heroBtnInstagramLink}
+                            onChange={(e) => setEditableHeroBanner(prev => ({ ...prev, heroBtnInstagramLink: e.target.value }))}
+                            className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-300"
+                            placeholder="e.g. https://instagram.com/yourprofile"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                {/* B. WELCOME BANNER CONFIGURATION */}
+                <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 space-y-6">
+                  <div className="border-b border-neutral-900 pb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={16} className="text-amber-400" />
+                      <div>
+                        <h4 className="font-serif font-bold text-base text-neutral-200">2. Welcome Banner Section</h4>
+                        <p className="text-[11px] text-neutral-500">Prominent custom banner block positioned directly below the Hero.</p>
+                      </div>
+                    </div>
+
+                    <label className="relative inline-flex items-center cursor-pointer select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={editableWelcomeBanner.visible}
+                        onChange={(e) => setEditableWelcomeBanner(prev => ({ ...prev, visible: e.target.checked }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-neutral-400 after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 peer-checked:after:bg-neutral-950 peer-checked:after:border-amber-400" />
+                      <span className="ml-2 text-xs font-semibold text-neutral-300">Visible</span>
+                    </label>
+                  </div>
+
+                  {/* Direct Image Upload for Welcome Banner */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Banner Visual Art Image</label>
+                    <DirectFileUploader
+                      label="Direct Device Image Upload"
+                      accept="image/*"
+                      folder="welcome"
+                      currentValue={editableWelcomeBanner.bgImage}
+                      onUploadComplete={(url) => setEditableWelcomeBanner(prev => ({ ...prev, bgImage: url }))}
+                    />
+                    <p className="text-[10px] text-neutral-500">Upload striking art or product image for the welcome campaign block.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Welcome Banner Title */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Campaign / Heading Title</label>
+                      <input 
+                        type="text" 
+                        value={editableWelcomeBanner.title}
+                        onChange={(e) => setEditableWelcomeBanner(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full px-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:border-amber-500/50 focus:outline-none transition-colors"
+                        placeholder="Festive Luxury Makeup Offer"
+                        required
+                      />
+                    </div>
+
+                    {/* Welcome Banner Description / Subtitle */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Description / Action Details</label>
+                      <textarea
+                        value={editableWelcomeBanner.subtitle}
+                        onChange={(e) => setEditableWelcomeBanner(prev => ({ ...prev, subtitle: e.target.value }))}
+                        className="w-full px-4 py-2.5 h-24 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-200 focus:border-amber-500/50 focus:outline-none transition-colors resize-none"
+                        placeholder="Describe the offer or welcoming details"
+                        required
+                      />
+                    </div>
+
+                    {/* Welcome Banner Action Button Text & Link */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Button Text (CTA)</label>
+                        <input 
+                          type="text" 
+                          value={editableWelcomeBanner.buttonText}
+                          onChange={(e) => setEditableWelcomeBanner(prev => ({ ...prev, buttonText: e.target.value }))}
+                          className="w-full px-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                          placeholder="e.g. Schedule Styling"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] uppercase font-bold text-neutral-450 tracking-wider block">Button URL / Anchor Link</label>
+                        <input 
+                          type="text" 
+                          value={editableWelcomeBanner.buttonLink}
+                          onChange={(e) => setEditableWelcomeBanner(prev => ({ ...prev, buttonLink: e.target.value }))}
+                          className="w-full px-4 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                          placeholder="e.g. #booking"
+                        />
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Bottom Action bar */}
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleSaveHeroWelcome}
+                  disabled={savingHeroBanner}
+                  className="px-8 py-3.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl transition-all shadow-lg hover:scale-[1.02] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {savingHeroBanner ? (
+                    <Loader2 size={16} className="animate-spin text-neutral-950" />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  <span>{savingHeroBanner ? "Publishing Changes to Customers..." : "Publish All Hero and Banner Changes"}</span>
+                </button>
+              </div>
+
+            </div>
+          )}
+
           {/* VISUAL WEBSITE BUILDER SUBTAB */}
           {activeSubTab === 'builder' && (
             <VisualBuilderTab
@@ -854,6 +1220,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               setNewPasswordInput={setNewPasswordInput}
               confirmPasswordInput={confirmPasswordInput}
               setConfirmPasswordInput={setConfirmPasswordInput}
+              handleResetBuilder={handleResetBuilder}
+              handlePreviewBuilder={handlePreviewBuilder}
             />
           )}
 
@@ -885,8 +1253,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="bg-neutral-950 border border-neutral-850 rounded-3xl p-6 space-y-6">
                   <div className="border-b border-neutral-900 pb-3 flex items-center justify-between">
                     <div>
-                      <h4 className="font-serif font-bold text-base text-neutral-200">1. Welcome Premium Banner (Header Announcement)</h4>
-                      <p className="text-[11px] text-neutral-500">Premium ribbon block displayed above main header logo controls.</p>
+                      <h4 className="font-serif font-bold text-base text-neutral-200">1. Premium Welcome Banner Section</h4>
+                      <p className="text-[11px] text-neutral-500">Fully customizable display banner positioned directly below the main Hero section.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer select-none">
                       <input 
@@ -1854,16 +2222,66 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                   </div>
 
-                  <div className="flex gap-2">
-                    <button type="submit" className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-bold">
-                      Add Service Log
-                    </button>
-                    <button 
-                      type="button" onClick={() => setShowAddService(false)}
-                      className="px-4 py-2 border border-neutral-800 hover:bg-neutral-900 rounded-xl text-xs font-bold"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex flex-wrap gap-2 pt-2 justify-between items-center">
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-bold">
+                        Add Service Log (Save)
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setNewSName("");
+                          setNewSPrice(100);
+                          setNewSImage("");
+                          setNewSSub("");
+                          setNewSCat("Skin");
+                          setNewSDuration("45 Min");
+                          setNewSDesc("");
+                          setNewSBenefit("");
+                          setToastType('success');
+                          setToastMessage("Cleared and reset service inputs form fields!");
+                        }}
+                        className="px-4 py-2.5 bg-neutral-900 border border-neutral-800 text-neutral-300 rounded-xl text-xs font-bold hover:bg-neutral-800"
+                      >
+                        Reset Form
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (onTempPreview) {
+                            const tempService = {
+                              id: 'preview-temp-service-' + Date.now(),
+                              name: newSName || 'Preview Service Layout',
+                              price: Number(newSPrice) || 999,
+                              image: newSImage || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80',
+                              subtitle: newSSub || 'Luxury skin shine preview details',
+                              category: newSCat || 'Skin',
+                              duration: newSDuration || '45 min',
+                              description: newSDesc || 'Detailed luxury services description placeholder',
+                              benefits: newSBenefit ? newSBenefit.split(',').map(s=>s.trim()) : ['Benefit A', 'Benefit B']
+                            };
+                            onTempPreview({
+                              services: [tempService, ...services]
+                            });
+                            setToastType('success');
+                            setToastMessage("Service layout preview is active! Switch to home tab to check.");
+                          }
+                        }}
+                        className="px-4 py-2.5 border border-amber-500/30 text-amber-500 rounded-xl text-xs font-bold hover:bg-neutral-950 flex items-center gap-1"
+                      >
+                        <Eye size={12} />
+                        <span>Preview on Site</span>
+                      </button>
+                      <button 
+                        type="button" onClick={() => setShowAddService(false)}
+                        className="px-4 py-2.5 border border-neutral-800 hover:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -1977,16 +2395,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     )}
                   </div>
 
-                  <div className="flex gap-2">
-                    <button type="submit" className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-bold">
-                      Pin to Lookbook
-                    </button>
-                    <button 
-                      type="button" onClick={() => setShowAddGallery(false)}
-                      className="px-4 py-2 border border-neutral-800 rounded-xl text-xs font-bold"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex flex-wrap gap-2 pt-2 justify-between items-center w-full">
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-bold">
+                        Pin to Lookbook (Save)
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setNewGTitle("");
+                          setNewGImage("");
+                          setNewGCat("bridal");
+                          setNewGIsBA(false);
+                          setNewGBeforeImage("");
+                          setToastType('success');
+                          setToastMessage("Cleared and reset Lookbook form fields!");
+                        }}
+                        className="px-4 py-2.5 bg-neutral-900 border border-neutral-800 text-neutral-300 rounded-xl text-xs font-bold hover:bg-neutral-800"
+                      >
+                        Reset Form
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (onTempPreview) {
+                            const tempGalleryItem = {
+                              id: 'preview-temp-gallery-' + Date.now(),
+                              title: newGTitle || 'Preview Look Shimmer',
+                              category: newGCat || 'bridal',
+                              image: newGImage || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80',
+                              isBeforeAfter: newGIsBA,
+                              beforeImage: newGBeforeImage || ''
+                            };
+                            onTempPreview({
+                              galleryItems: [tempGalleryItem, ...gallery]
+                            });
+                            setToastType('success');
+                            setToastMessage("Lookbook item preview is active! Switch to home tab to check.");
+                          }
+                        }}
+                        className="px-4 py-2.5 border border-amber-500/30 text-amber-500 rounded-xl text-xs font-bold hover:bg-neutral-950 flex items-center gap-1"
+                      >
+                        <Eye size={12} />
+                        <span>Preview on Site</span>
+                      </button>
+                      <button 
+                        type="button" onClick={() => setShowAddGallery(false)}
+                        className="px-4 py-2.5 border border-neutral-800 hover:bg-neutral-900 rounded-xl text-xs font-bold text-neutral-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -2085,16 +2547,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                   </div>
 
-                  <div className="flex gap-2 font-semibold">
-                    <button type="submit" className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs">
-                      Persist Offer Card
-                    </button>
-                    <button 
-                      type="button" onClick={() => setShowAddOffer(false)}
-                      className="px-4 py-2 border border-neutral-800 rounded-xl text-xs"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex flex-wrap gap-2 pt-2 justify-between items-center w-full">
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-bold">
+                        Persist Offer Card (Save)
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setNewOTitle("");
+                          setNewOCode("");
+                          setNewODiscount(15);
+                          setNewODesc("");
+                          setNewOImage("");
+                          setToastType('success');
+                          setToastMessage("Cleared and reset New Offer inputs!");
+                        }}
+                        className="px-4 py-2.5 bg-neutral-900 border border-neutral-800 text-neutral-300 rounded-xl text-xs font-bold hover:bg-neutral-800"
+                      >
+                        Reset Form
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (onTempPreview) {
+                            const tempOffer = {
+                              id: 'preview-temp-offer-' + Date.now(),
+                              title: newOTitle || 'Preview Holiday Discount',
+                              code: newOCode || 'PROMO50',
+                              discount: Number(newODiscount) || 50,
+                              description: newODesc || 'Special preview rates for first-time customers.',
+                              image: newOImage || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=350&q=80'
+                            };
+                            onTempPreview({
+                              offers: [tempOffer, ...offers]
+                            });
+                            setToastType('success');
+                            setToastMessage("Offers promo preview is active! Switch to home tab to check.");
+                          }
+                        }}
+                        className="px-4 py-2.5 border border-amber-500/30 text-amber-500 rounded-xl text-xs font-bold hover:bg-neutral-950 flex items-center gap-1"
+                      >
+                        <Eye size={12} />
+                        <span>Preview on Site</span>
+                      </button>
+                      <button 
+                        type="button" onClick={() => setShowAddOffer(false)}
+                        className="px-4 py-2.5 border border-neutral-800 hover:bg-neutral-950 rounded-xl text-xs font-bold text-neutral-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -2190,16 +2696,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <button type="submit" className="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-bold">
-                      Post Testimonial
-                    </button>
-                    <button 
-                      type="button" onClick={() => setShowAddReview(false)}
-                      className="px-4 py-2 border border-neutral-800 rounded-xl text-xs font-bold"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex flex-wrap gap-2 pt-2 justify-between items-center w-full">
+                    <div className="flex gap-2">
+                      <button type="submit" className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-xs font-bold">
+                        Post Testimonial (Save)
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setNewRName("");
+                          setNewRRating(5);
+                          setNewRText("");
+                          setNewRAvatar("");
+                          setToastType('success');
+                          setToastMessage("Cleared and reset Review fields!");
+                        }}
+                        className="px-4 py-2.5 bg-neutral-900 border border-neutral-800 text-neutral-300 rounded-xl text-xs font-bold hover:bg-neutral-800"
+                      >
+                        Reset Form
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          if (onTempPreview) {
+                            const tempReview = {
+                              id: 'preview-temp-review-' + Date.now(),
+                              name: newRName || 'Preview Guest',
+                              rating: newRRating || 5,
+                              text: newRText || 'Incredible service! Highly satisfied with the luxury salon experience here.',
+                              avatar: newRAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80'
+                            };
+                            onTempPreview({
+                              reviews: [tempReview, ...reviews]
+                            });
+                            setToastType('success');
+                            setToastMessage("Review card preview is active! Switch to home tab to check.");
+                          }
+                        }}
+                        className="px-4 py-2.5 border border-amber-500/30 text-amber-500 rounded-xl text-xs font-bold hover:bg-neutral-950 flex items-center gap-1"
+                      >
+                        <Eye size={12} />
+                        <span>Preview on Site</span>
+                      </button>
+                      <button 
+                        type="button" onClick={() => setShowAddReview(false)}
+                        className="px-4 py-2.5 border border-neutral-850 hover:bg-neutral-950 rounded-xl text-xs font-bold text-neutral-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 </form>
               )}
@@ -2389,6 +2937,80 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     />
                   </div>
 
+                  {/* Dynamic Premium Hero Buttons Configurations */}
+                  <div className="col-span-2 space-y-3 bg-neutral-900/30 p-4 border border-neutral-800 rounded-2xl">
+                    <h4 className="text-xs uppercase font-bold text-amber-500 tracking-wider">Hero Section Premium Buttons Configuration</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      
+                      {/* Button 1: Appointment */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-neutral-405">Appointment Button Text</label>
+                        <input 
+                          type="text" 
+                          value={editableBanners.heroBtnAppointmentText || ''} 
+                          placeholder="Book Appointment"
+                          onChange={(e) => setEditableBanners({ ...editableBanners, heroBtnAppointmentText: e.target.value })}
+                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-neutral-405">Appointment Anchor Link</label>
+                        <input 
+                          type="text" 
+                          value={editableBanners.heroBtnAppointmentLink || ''} 
+                          placeholder="#booking"
+                          onChange={(e) => setEditableBanners({ ...editableBanners, heroBtnAppointmentLink: e.target.value })}
+                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                        />
+                      </div>
+
+                      {/* Button 2: WhatsApp */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-neutral-405">WhatsApp Button Text</label>
+                        <input 
+                          type="text" 
+                          value={editableBanners.heroBtnWhatsAppText || ''} 
+                          placeholder="WhatsApp"
+                          onChange={(e) => setEditableBanners({ ...editableBanners, heroBtnWhatsAppText: e.target.value })}
+                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-neutral-405">Custom WhatsApp Link / Mobile Number (Optional)</label>
+                        <input 
+                          type="text" 
+                          value={editableBanners.heroBtnWhatsAppLink || ''} 
+                          placeholder="Leave blank to use default, or enter wa.me link"
+                          onChange={(e) => setEditableBanners({ ...editableBanners, heroBtnWhatsAppLink: e.target.value })}
+                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                        />
+                      </div>
+
+                      {/* Button 3: Instagram */}
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-neutral-405">Instagram Button Text</label>
+                        <input 
+                          type="text" 
+                          value={editableBanners.heroBtnInstagramText || ''} 
+                          placeholder="Instagram"
+                          onChange={(e) => setEditableBanners({ ...editableBanners, heroBtnInstagramText: e.target.value })}
+                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-neutral-405">Custom Instagram Profile Link (Optional)</label>
+                        <input 
+                          type="text" 
+                          value={editableBanners.heroBtnInstagramLink || ''} 
+                          placeholder="Leave blank to use default social info"
+                          onChange={(e) => setEditableBanners({ ...editableBanners, heroBtnInstagramLink: e.target.value })}
+                          className="w-full px-3 py-1.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200"
+                        />
+                      </div>
+                      
+                    </div>
+                  </div>
+
                   <div className="h-[1px] bg-neutral-850 col-span-2 my-2" />
 
                   <div className="space-y-2">
@@ -2488,14 +3110,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
               {/* SAVE ALL CHANGES BUTTON BAR */}
-              <div className="flex items-center gap-4 py-4 select-none">
+              <div className="flex flex-wrap items-center gap-4 py-6 select-none border-t border-neutral-850 mt-6 justify-between">
+                <div className="flex flex-wrap items-center gap-4">
+                  <button
+                    type="submit"
+                    disabled={savingConfigs}
+                    className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl hover:scale-[1.01] transition-transform cursor-pointer shadow-lg inline-flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {savingConfigs ? <Loader2 size={15} className="animate-spin text-neutral-950" /> : <Check size={15} />}
+                    <span>{savingConfigs ? 'Saving configs...' : 'Save Dynamic Settings'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleResetConfigs}
+                    className="px-6 py-4 bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 text-neutral-300 font-bold uppercase tracking-wider text-xs rounded-xl hover:scale-[1.01] transition-transform cursor-pointer shadow-lg inline-flex items-center gap-2"
+                  >
+                    <span>Reset Settings</span>
+                  </button>
+                </div>
+
                 <button
-                  type="submit"
-                  disabled={savingConfigs}
-                  className="px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl hover:scale-[1.01] transition-transform cursor-pointer shadow-lg inline-flex items-center gap-2 disabled:opacity-50"
+                  type="button"
+                  onClick={handlePreviewConfigs}
+                  className="px-6 py-4 bg-neutral-950 border border-amber-500/30 hover:border-amber-500 hover:bg-neutral-900 text-amber-500 font-bold uppercase tracking-wider text-xs rounded-xl hover:scale-[1.01] transition-transform cursor-pointer shadow-lg inline-flex items-center gap-2"
                 >
-                  {savingConfigs ? <Loader2 size={15} className="animate-spin text-neutral-950" /> : <Check size={15} />}
-                  <span>{savingConfigs ? 'Persisting changes...' : 'Persist Everything Live'}</span>
+                  <Eye size={15} />
+                  <span>Preview Section changes</span>
                 </button>
               </div>
 

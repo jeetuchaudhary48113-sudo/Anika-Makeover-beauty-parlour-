@@ -60,6 +60,14 @@ export interface Banners {
   promoPackageTitle: string;
   promoPackageDesc: string;
   promoPackageImage: string;
+  
+  // Custom premium Hero buttons (editable in Admin Dashboard)
+  heroBtnAppointmentText?: string;
+  heroBtnAppointmentLink?: string;
+  heroBtnWhatsAppText?: string;
+  heroBtnWhatsAppLink?: string;
+  heroBtnInstagramText?: string;
+  heroBtnInstagramLink?: string;
 }
 
 export interface Owner {
@@ -90,6 +98,18 @@ export interface Contact {
 export interface SocialLinks {
   googleReviewsUrl: string;
   instagram: string;
+}
+
+export interface HeroBanner {
+  heroBgImage: string;
+  heroHeading: string;
+  heroSubheading: string;
+  heroBtnAppointmentText: string;
+  heroBtnAppointmentLink: string;
+  heroBtnWhatsAppText: string;
+  heroBtnWhatsAppLink: string;
+  heroBtnInstagramText: string;
+  heroBtnInstagramLink: string;
 }
 
 export interface WelcomeBanner {

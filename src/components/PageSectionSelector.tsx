@@ -5,12 +5,13 @@
 
 import React from 'react';
 import { Sparkles, Calendar, ArrowRight, Video, ChevronDown, Check, Star, Play, Music, VolumeX, Mail, Phone, MapPin } from 'lucide-react';
-import { WebBuilderSection, WebBuilderButton, Banners, Contact, Owner, SocialLinks, Service, GalleryItem, Review, Offer, Settings } from '../types';
+import { WebBuilderSection, WebBuilderButton, Banners, Contact, Owner, SocialLinks, Service, GalleryItem, Review, Offer, Settings, HeroBanner } from '../types';
 
 // Let's import our existing elegant templates
 import { Hero } from './Hero';
 import { PromotionalBanners } from './PromotionalBanners';
 import { AboutAndOwner } from './AboutAndOwner';
+import { FAQSection } from './FAQSection';
 import { ServicesSection } from './ServicesSection'; // Wait, let's look at folders. It was imported as "./components/ServicesSection" inside App.tsx or "./ServicesSection"? Let's check App.tsx lines 15-22.
 // Ah! It is imported as:
 // import { Hero } from './components/Hero'; // Oh! App.tsx is in "/src/App.tsx", so the components are in "./components/".
@@ -20,6 +21,7 @@ import { ServicesSection } from './ServicesSection'; // Wait, let's look at fold
 interface PageSectionSelectorProps {
   section: WebBuilderSection;
   banners: Banners;
+  heroBanner?: HeroBanner;
   contact: Contact;
   owner: Owner;
   socialLinks: SocialLinks;
@@ -48,6 +50,7 @@ interface PageSectionSelectorProps {
 export const PageSectionSelector: React.FC<PageSectionSelectorProps> = ({
   section,
   banners,
+  heroBanner,
   contact,
   owner,
   socialLinks,
@@ -164,76 +167,12 @@ export const PageSectionSelector: React.FC<PageSectionSelectorProps> = ({
   // ROUTE REDIRECTION SWITCH TO SUPPORT ALL 14 SECTIONS REORDERABLE AT WILL!
   switch (section.type) {
     case 'hero':
-      // Support overwriting default Hero background, headers, buttons dynamically if custom edits are supplied
-      if (section.content?.title || section.content?.imageUrl || section.content?.videoUrl) {
-        return (
-          <section 
-            id={section.id} 
-            style={stylesContainer} 
-            className={`relative relative-view min-h-[75vh] sm:min-h-[85vh] flex items-center justify-center overflow-hidden bg-neutral-950 ${spacingClass} ${roundClass} ${shadowClass} ${animationClass} ${hoverClass}`}
-          >
-            {/* Background Content Image or Video backdrop */}
-            <div className="absolute inset-0 z-0">
-              {section.content?.videoUrl ? (
-                <video 
-                  src={section.content.videoUrl} 
-                  autoPlay 
-                  loop 
-                  muted 
-                  playsInline 
-                  className={`w-full h-full object-cover opacity-35 scale-102 select-none`}
-                  style={{ objectPosition: section.content.imageCropFocus || 'center' }}
-                />
-              ) : (
-                <img 
-                  src={section.content?.imageUrl || banners.heroBgImage} 
-                  alt="Backdrop visual" 
-                  className={`w-full h-full object-cover opacity-35 scale-105 select-none`}
-                  style={{ objectPosition: section.content?.imageCropFocus || 'center' }}
-                  referrerPolicy="no-referrer"
-                />
-              )}
-              {/* Veneer cover overlay */}
-              <div 
-                className="absolute inset-0" 
-                style={{ 
-                  backgroundColor: section.content?.overlayColor || '#000000', 
-                  opacity: section.content?.overlayOpacity ?? 0.5 
-                }} 
-              />
-              <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-neutral-950 to-transparent" />
-            </div>
-
-            <div className={`relative z-10 ${widthClass} text-center flex flex-col ${alignmentClass} select-text px-4`}>
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-text text-[11px] uppercase tracking-[0.2em] mb-5">
-                <span className="w-1 px-1 rounded-full bg-amber-400" />
-                <span>{section.content?.subtitle || "Gorakhpur's Premium Beauty Experience"}</span>
-              </div>
-
-              <h1 className="font-serif font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-neutral-100 tracking-tight leading-[1.1] mb-5">
-                {section.content?.title || banners.heroHeading}
-              </h1>
-
-              {section.content?.description && (
-                <p className="max-w-2xl text-neutral-400 text-xs sm:text-sm md:text-base leading-relaxed font-light mb-8 font-sans">
-                  {section.content.description}
-                </p>
-              )}
-
-              {renderButtons(section.content?.buttons)}
-            </div>
-          </section>
-        );
-      }
       return (
         <HeroComponent 
-          banners={banners} 
+          heroBanner={heroBanner || banners} 
           contact={contact} 
+          socialLinks={socialLinks}
           onBookClick={() => handleDirectFormPreBook(services[0]?.id || "")}
-          onServicesClick={() => {
-            const element = document.getElementById('services');
-            if (element) element.scrollIntoView({ behavior: 'smooth' });
-          }}
         />
       );
 
@@ -278,12 +217,23 @@ export const PageSectionSelector: React.FC<PageSectionSelectorProps> = ({
       );
 
     case 'reviews':
+      return (
+        <div id={section.id}>
+          <InstagramReviewsStatsComponent 
+            socialLinks={socialLinks} 
+            reviews={reviews} 
+            showOnly="reviews"
+          />
+        </div>
+      );
+
     case 'instagram':
       return (
         <div id={section.id}>
           <InstagramReviewsStatsComponent 
             socialLinks={socialLinks} 
             reviews={reviews} 
+            showOnly="instagram"
           />
         </div>
       );
@@ -310,30 +260,17 @@ export const PageSectionSelector: React.FC<PageSectionSelectorProps> = ({
     // 🌟 FULL TEMPLATE LAYOUT BLOCKS FOR HIGH END WEBSITES
     case 'faq':
       return (
-        <section 
-          id={section.id} 
-          style={stylesContainer} 
-          className={`relative ${spacingClass} ${roundClass} ${animationClass} ${hoverClass} ${shadowClass}`}
-        >
-          <div className={widthClass}>
-            <div className={`flex flex-col mb-10 ${alignmentClass}`}>
-              <span className="p-1 px-3 bg-neutral-900 border border-neutral-800 text-[10px] font-mono rounded text-amber-500 uppercase tracking-widest">{section.content?.subtitle || "Got questions?"}</span>
-              <h2 className="font-serif font-bold text-2xl sm:text-3xl text-neutral-100 mt-2">{section.content?.title || "Frequently Asked Questions"}</h2>
-              {section.content?.description && <p className="text-xs text-neutral-400 mt-2 font-light max-w-xl text-center">{section.content.description}</p>}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(section.content?.faqItems || []).map((item, idx) => (
-                <div key={idx} className="bg-neutral-900/40 p-4 border border-neutral-850 rounded-xl space-y-1.5 hover:border-amber-500/15 duration-300 transition-colors select-text">
-                  <h3 className="font-serif font-bold text-sm sm:text-base text-neutral-100">{item.question}</h3>
-                  <p className="text-xs text-neutral-400 leading-relaxed font-light font-sans">{item.answer}</p>
-                </div>
-              ))}
-            </div>
-
-            {renderButtons(section.content?.buttons)}
-          </div>
-        </section>
+        <FAQSection
+          section={section}
+          widthClass={widthClass}
+          roundClass={roundClass}
+          shadowClass={shadowClass}
+          animationClass={animationClass}
+          hoverClass={hoverClass}
+          spacingClass={spacingClass}
+          alignmentClass={alignmentClass}
+          stylesContainer={stylesContainer}
+        />
       );
 
     case 'pricing':

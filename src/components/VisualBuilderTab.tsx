@@ -26,6 +26,8 @@ interface VisualBuilderTabProps {
   setNewPasswordInput: (v: string) => void;
   confirmPasswordInput: string;
   setConfirmPasswordInput: (v: string) => void;
+  handleResetBuilder?: () => void;
+  handlePreviewBuilder?: () => void;
 }
 
 type TabMode = 'sections' | 'global' | 'media' | 'security';
@@ -51,7 +53,9 @@ export const VisualBuilderTab: React.FC<VisualBuilderTabProps> = ({
   newPasswordInput,
   setNewPasswordInput,
   confirmPasswordInput,
-  setConfirmPasswordInput
+  setConfirmPasswordInput,
+  handleResetBuilder,
+  handlePreviewBuilder
 }) => {
   // Sub tab tracking
   const [activeTab, setActiveTab] = useState<TabMode>('sections');
@@ -252,13 +256,30 @@ export const VisualBuilderTab: React.FC<VisualBuilderTabProps> = ({
             You are in complete control of the website. Edit content, styles, spacing, background crop levels, file templates, reorder blocks, and add custom items directly. Press <b>Publish Changes</b> below to save instantly.
           </p>
         </div>
-        <button
-          onClick={handleSaveBuilder}
-          className="px-6 py-3.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-xs rounded-xl shadow-lg transition-transform hover:scale-102 flex items-center justify-center gap-2 cursor-pointer w-full md:w-auto self-stretch shrink-0"
-        >
-          <Check size={15} />
-          <span>Publish All Changes</span>
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2.5 w-full md:w-auto self-stretch shrink-0 justify-end md:items-center">
+          <button
+            onClick={handleSaveBuilder}
+            className="px-5 py-3 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-[11px] rounded-xl shadow-lg transition-transform hover:scale-[1.01] flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Check size={14} />
+            <span>Publish Changes</span>
+          </button>
+          
+          <button
+            onClick={handleResetBuilder}
+            className="px-4 py-3 bg-neutral-900 border border-neutral-800 hover:bg-neutral-850 text-neutral-300 font-bold uppercase tracking-wider text-[11px] rounded-xl transition-transform hover:scale-[1.01] flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span>Reset Layout</span>
+          </button>
+
+          <button
+            onClick={handlePreviewBuilder}
+            className="px-4 py-3 bg-neutral-950 border border-amber-500/20 hover:border-amber-500 hover:bg-neutral-900 text-amber-500 font-bold uppercase tracking-wider text-[11px] rounded-xl transition-transform hover:scale-[1.01] flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Eye size={14} />
+            <span>Preview Draft</span>
+          </button>
+        </div>
       </div>
 
       {/* HORIZONTAL BUILDER TABS NAVIGATION */}

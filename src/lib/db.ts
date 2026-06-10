@@ -27,7 +27,9 @@ import {
   Settings, 
   Contact, 
   SocialLinks, 
-  Offer 
+  Offer,
+  WelcomeBanner,
+  HeroBanner
 } from '../types';
 
 export enum OperationType {
@@ -129,13 +131,21 @@ const DEFAULT_BANNERS: Banners = {
   heroBgImage: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1600&q=80",
   promoBridalTitle: "Luxury Royal Bridal Makeup Packages",
   promoBridalDesc: "HD makeup, Airbrush luxury, premium imported makeup kits customized for your unique skin tone in 2026.",
-  promoBridalImage: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=800&q=80",
+  promoBridalImage: "https://images.unsplash.com/photo-1487412720507-e7ab37653c6f?auto=format&fit=crop&w=800&q=80",
   promoHairTitle: "Revitalize Hair Transformation",
   promoHairDesc: "Professional hair spas, deep keratin nourishment, and rich structural coloring to completely amplify your hair.",
   promoHairImage: "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=800&q=80",
   promoPackageTitle: "Seasonal Premium Beauty Combos",
   promoPackageDesc: "Enjoy our handpicked facial skincare, cleanup, manicures, and complete grooming packages at optimized pricing.",
-  promoPackageImage: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=800&q=80"
+  promoPackageImage: "https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&w=800&q=80",
+  
+  // Custom premium Hero buttons values
+  heroBtnAppointmentText: "Book Appointment",
+  heroBtnAppointmentLink: "#booking",
+  heroBtnWhatsAppText: "WhatsApp",
+  heroBtnWhatsAppLink: "",
+  heroBtnInstagramText: "Instagram",
+  heroBtnInstagramLink: ""
 };
 
 const DEFAULT_SERVICES: Service[] = [
@@ -904,7 +914,7 @@ export async function deleteAppointment(id: string): Promise<void> {
 }
 
 // 11. Welcome Banner & Visual Builder Setup
-import { WelcomeBanner, VisualBuilderSettings, WebBuilderSection } from '../types';
+import { VisualBuilderSettings, WebBuilderSection } from '../types';
 
 export const DEFAULT_BUILDER_SECTIONS: WebBuilderSection[] = [
   {
@@ -1289,6 +1299,18 @@ export const DEFAULT_WELCOME_BANNER: WelcomeBanner = {
   buttonTextColor: "#000000"
 };
 
+export const DEFAULT_HERO_BANNER: HeroBanner = {
+  heroBgImage: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1600&q=80",
+  heroHeading: "Anika Makeover Salon",
+  heroSubheading: "Elevate Your Natural Radiance & Beauty",
+  heroBtnAppointmentText: "Book Appointment",
+  heroBtnAppointmentLink: "#booking",
+  heroBtnWhatsAppText: "WhatsApp",
+  heroBtnWhatsAppLink: "",
+  heroBtnInstagramText: "Instagram",
+  heroBtnInstagramLink: ""
+};
+
 export const DEFAULT_VISUAL_BUILDER: VisualBuilderSettings = {
   sectionsText: {
     hero: {
@@ -1402,19 +1424,19 @@ export async function getWelcomeBanner(): Promise<WelcomeBanner> {
     return getLocalStorage<WelcomeBanner>('anika_welcome_banner', DEFAULT_WELCOME_BANNER);
   }
   try {
-    const docRef = doc(db, 'settings', 'welcomeBanner');
+    const docRef = doc(db, 'welcomeBanner', 'main');
     const snap = await getDoc(docRef);
     if (!snap.exists()) {
       try {
         await setDoc(docRef, DEFAULT_WELCOME_BANNER);
       } catch (writeErr) {
-        console.warn("Seeding settings/welcomeBanner skipped:", writeErr);
+        console.warn("Seeding welcomeBanner/main skipped:", writeErr);
       }
       return DEFAULT_WELCOME_BANNER;
     }
     return { ...DEFAULT_WELCOME_BANNER, ...snap.data() } as WelcomeBanner;
   } catch (error) {
-    handleFirestoreError(error, OperationType.GET, 'settings/welcomeBanner');
+    handleFirestoreError(error, OperationType.GET, 'welcomeBanner/main');
     return getLocalStorage<WelcomeBanner>('anika_welcome_banner', DEFAULT_WELCOME_BANNER);
   }
 }
@@ -1423,9 +1445,42 @@ export async function updateWelcomeBanner(banner: WelcomeBanner): Promise<void> 
   setLocalStorage<WelcomeBanner>('anika_welcome_banner', banner);
   if (!isMockFirebase) {
     try {
-      await setDoc(doc(db, 'settings', 'welcomeBanner'), banner);
+      await setDoc(doc(db, 'welcomeBanner', 'main'), banner);
     } catch (e) {
-      handleFirestoreError(e, OperationType.UPDATE, 'settings/welcomeBanner');
+      handleFirestoreError(e, OperationType.UPDATE, 'welcomeBanner/main');
+    }
+  }
+}
+
+export async function getHeroBanner(): Promise<HeroBanner> {
+  if (isMockFirebase) {
+    return getLocalStorage<HeroBanner>('anika_hero_banner', DEFAULT_HERO_BANNER);
+  }
+  try {
+    const docRef = doc(db, 'heroBanner', 'main');
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      try {
+        await setDoc(docRef, DEFAULT_HERO_BANNER);
+      } catch (writeErr) {
+        console.warn("Seeding heroBanner/main skipped:", writeErr);
+      }
+      return DEFAULT_HERO_BANNER;
+    }
+    return { ...DEFAULT_HERO_BANNER, ...snap.data() } as HeroBanner;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'heroBanner/main');
+    return getLocalStorage<HeroBanner>('anika_hero_banner', DEFAULT_HERO_BANNER);
+  }
+}
+
+export async function updateHeroBanner(banner: HeroBanner): Promise<void> {
+  setLocalStorage<HeroBanner>('anika_hero_banner', banner);
+  if (!isMockFirebase) {
+    try {
+      await setDoc(doc(db, 'heroBanner', 'main'), banner);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, 'heroBanner/main');
     }
   }
 }

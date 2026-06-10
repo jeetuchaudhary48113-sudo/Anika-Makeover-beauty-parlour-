@@ -4,98 +4,115 @@
  */
 
 import React from 'react';
-import { Calendar, MessageSquare, PhoneCall } from 'lucide-react';
-import { Banners, Contact } from '../types';
+import { Calendar, MessageSquare, Instagram } from 'lucide-react';
+import { HeroBanner, Contact, SocialLinks } from '../types';
 
 interface HeroProps {
-  banners: Banners;
+  heroBanner: HeroBanner;
   contact: Contact;
+  socialLinks?: SocialLinks;
   onBookClick: () => void;
-  onServicesClick: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ banners, contact, onBookClick, onServicesClick }) => {
+export const Hero: React.FC<HeroProps> = ({ heroBanner, contact, socialLinks, onBookClick }) => {
+  const bgImage = heroBanner.heroBgImage || "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1600&q=80";
+
   return (
-    <section id="home" className="relative relative-view h-[85vh] sm:h-[90vh] md:h-[95vh] flex items-center justify-center overflow-hidden bg-neutral-950">
+    <section id="home" className="relative w-full bg-neutral-950 text-neutral-100 pt-24 pb-16 px-4 sm:px-6 lg:px-8 select-none">
       
-      {/* Impeccable Background Image with Subtle Parallax Zoom Style */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={banners.heroBgImage} 
-          alt="Anika Makeover Studio Luxury Background" 
-          className="w-full h-full object-cover opacity-35 object-center scale-105 animate-pulse-slow select-none"
-        />
-        {/* Double-layered luxurious shadow veneer gradients */}
-        <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/70 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-neutral-950 to-transparent" />
+      {/* Decorative ambient subtle background glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Hero Content Containment */}
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center select-none">
+      <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center">
         
-        {/* Badge Intro */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs uppercase tracking-[0.25em] mb-6 animate-fade-in">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+        {/* Luxe Badge */}
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs uppercase tracking-[0.2em] mb-6 font-sans">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
           <span>Gorakhpur's Premium Beauty Experience</span>
         </div>
 
-        {/* Brand Masterpiece Headings */}
-        <h1 className="font-serif font-bold text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-neutral-100 tracking-tight leading-[1.1] mb-6 select-text max-w-4xl">
-          <span className="block">{banners.heroHeading}</span>
-          <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-sans font-extralight text-amber-500/95 tracking-wide mt-3 select-text">
-            {banners.heroSubheading}
-          </span>
+        {/* Salon Name Label (Heading) */}
+        <h1 className="font-serif font-black text-4xl sm:text-5xl md:text-6xl lg:text-7xl tracking-tight leading-none text-neutral-100 uppercase mb-4">
+          {heroBanner.heroHeading || "Anika Makeover Salon"}
         </h1>
 
-        {/* Short Explainer */}
-        <p className="max-w-2xl text-neutral-400 text-sm sm:text-base md:text-lg mb-10 leading-relaxed font-light">
-          Experience world-class hair, luxurious skin therapies, and mesmerizing custom bridal makeovers crafted in Gorakhpur by icon professional <strong>Anika Choudhary</strong>.
+        {/* Subheading / Subtitle */}
+        <p className="text-amber-500 font-sans font-medium text-lg sm:text-xl md:text-2xl tracking-wide max-w-3xl mb-8">
+          {heroBanner.heroSubheading || "Where Luxury Meets Beauty & Elegant Styling"}
         </p>
 
-        {/* Adaptive buttons row */}
-        <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 w-full px-4">
+        {/* Brand Masterpiece Framed Image - GUARANTEES Full image visibility on all screen sizes, perfect scaling, no overlay/blur, no cropping/clipping */}
+        <div className="relative w-full max-w-4xl mx-auto rounded-3xl overflow-hidden border border-neutral-800 bg-neutral-900/50 p-2 sm:p-3 mb-10 shadow-2xl">
+          <div className="relative rounded-2xl overflow-hidden bg-neutral-950 aspect-[16/9] sm:aspect-[21/9] flex items-center justify-center">
+            {/* Ambient Blurred Background (optional backdrop, fallback style) */}
+            <img 
+              src={bgImage} 
+              alt="" 
+              className="absolute inset-0 w-full h-full object-cover opacity-20 filter blur-xl select-none"
+              referrerPolicy="no-referrer"
+            />
+            {/* Real Full Image - Absolutely zero cropping, zero clipping, 100% visible on Mobile, Tablet & Desktop */}
+            <img 
+              src={bgImage} 
+              alt="Anika Luxury Makeover Studio" 
+              className="relative z-10 max-h-[30vh] sm:max-h-[40vh] md:max-h-[50vh] w-full h-full object-contain select-none transition-transform duration-700 hover:scale-[1.02]"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
+
+        {/* Short introduction paragraph */}
+        <p className="max-w-2xl text-neutral-400 text-sm sm:text-base leading-relaxed mb-8 font-light">
+          Experience world-class hair designs, luxurious skin therapies, and mesmerizing custom bridal makeovers crafted in Gorakhpur by master beauty professional <strong>Anika Choudhary</strong>.
+        </p>
+
+        {/* Hero Action Buttons - Replacing single button with exactly 3 premium action buttons */}
+        <div id="hero-buttons-container" className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-4 w-full px-4 max-w-3xl">
           
+          {/* Button 1: Book Appointment */}
           <button
-            onClick={onBookClick}
-            className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-semibold tracking-wider uppercase rounded-full hover:from-amber-400 hover:to-amber-500 shadow-xl shadow-amber-500/10 hover:scale-[1.04] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer"
+            id="hero-btn-book"
+            onClick={() => {
+              const element = document.getElementById('booking') || document.getElementById('sec-booking');
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth' });
+              }
+              onBookClick();
+            }}
+            className="w-full sm:w-auto min-w-[210px] px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold tracking-wider uppercase rounded-xl shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
           >
             <Calendar size={18} />
-            <span>Book Appointment</span>
+            <span>{heroBanner.heroBtnAppointmentText || 'Book Appointment'}</span>
           </button>
 
-          <button
-            onClick={onServicesClick}
-            className="w-full sm:w-auto px-8 py-4 bg-neutral-900 hover:bg-neutral-800 text-neutral-200 hover:text-white font-semibold tracking-wider uppercase rounded-full border border-neutral-800 hover:border-neutral-700 shadow-lg hover:scale-[1.04] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5 cursor-pointer"
-          >
-            Explore Services
-          </button>
-
+          {/* Button 2: WhatsApp */}
           <a
-            href={`https://wa.me/${contact.whatsapp.replace('+', '')}`}
+            id="hero-btn-whatsapp"
+            href={heroBanner.heroBtnWhatsAppLink || `https://wa.me/${contact.whatsapp.replace('+', '').replace(/\s/g, '')}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full sm:w-auto px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold tracking-wider uppercase rounded-full shadow-lg hover:scale-[1.04] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2.5"
+            className="w-full sm:w-auto min-w-[210px] px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold tracking-wider uppercase rounded-xl shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
           >
             <MessageSquare size={18} />
-            <span>WhatsApp Booking</span>
+            <span>{heroBanner.heroBtnWhatsAppText || 'WhatsApp'}</span>
           </a>
 
+          {/* Button 3: Instagram */}
           <a
-            href={`tel:${contact.phone}`}
-            className="w-full sm:w-auto px-6 py-4 text-neutral-300 hover:text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            id="hero-btn-instagram"
+            href={heroBanner.heroBtnInstagramLink || (socialLinks?.instagram || "https://instagram.com")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full sm:w-auto min-w-[210px] px-8 py-3.5 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-200 hover:text-white font-bold tracking-wider uppercase rounded-xl shadow-lg hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
           >
-            <PhoneCall size={16} className="text-amber-500" />
-            <span>Call {contact.phone}</span>
+            <Instagram size={18} />
+            <span>{heroBanner.heroBtnInstagramText || 'Instagram'}</span>
           </a>
           
         </div>
 
-      </div>
-
-      {/* Scroll Down Indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
-        <span className="text-[10px] uppercase tracking-[0.3em] text-neutral-500">Discover More</span>
-        <div className="w-[1.5px] h-10 bg-gradient-to-b from-amber-500 to-transparent animate-bounce" />
       </div>
 
     </section>
