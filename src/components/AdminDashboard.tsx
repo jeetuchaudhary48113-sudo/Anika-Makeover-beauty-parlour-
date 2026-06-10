@@ -443,6 +443,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Appointment states setters
   const changeApptStatus = async (id: string, s: 'accepted' | 'rejected') => {
     try {
+      setAppointments(prev => prev.map(item => item.id === id ? { ...item, status: s } : item));
       await updateAppointmentStatus(id, s);
       setToastType('success');
       setToastMessage(`Appointment log status changed to ${s}!`);
@@ -456,6 +457,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleRemoveAppt = async (id: string) => {
     if (confirm("Permanently delete this appointment booking log?")) {
       try {
+        setAppointments(prev => prev.filter(item => item.id !== id));
         await deleteAppointment(id);
         setToastType('success');
         setToastMessage("Appointment record removed successfully.");
@@ -531,6 +533,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleRemoveService = async (id: string) => {
     if (confirm("Are you sure you want to delete this service?")) {
       try {
+        setServices(prev => prev.filter(item => item.id !== id));
         await deleteService(id);
         setToastType('success');
         setToastMessage("Service deleted and removed instantly.");
@@ -579,6 +582,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleRemoveGallery = async (id: string) => {
     if (confirm("Delete photo from gallery collection?")) {
       try {
+        setGallery(prev => prev.filter(item => item.id !== id));
         await deleteGalleryItem(id);
         setToastType('success');
         setToastMessage("Gallery item removed successfully.");
@@ -627,6 +631,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleRemoveReview = async (id: string) => {
     if (confirm("Delete customer reviews entry?")) {
       try {
+        setReviews(prev => prev.filter(item => item.id !== id));
         await deleteReview(id);
         setToastType('success');
         setToastMessage("Review log wiped successfully.");
@@ -675,6 +680,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleRemoveOffer = async (id: string) => {
     if (confirm("Delete this coupon promo offer?")) {
       try {
+        setOffers(prev => prev.filter(item => item.id !== id));
         await deleteOffer(id);
         setToastType('success');
         setToastMessage("Coupon offer removed successfully.");
@@ -798,14 +804,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       value={securityName}
                       onChange={(e) => setSecurityName(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-neutral-900 border border-neutral-800 rounded-xl text-xs text-neutral-100 placeholder-neutral-600 focus:outline-none focus:border-amber-500 transition-colors"
-                      placeholder="e.g. Anika Choudhary..."
+                      placeholder="e.g. Menka Singh..."
                       required
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] uppercase font-bold tracking-wider text-neutral-400 block">
-                      Anika's Styling Experience (Years)
+                      Menka's Styling Experience (Years)
                     </label>
                     <input 
                       type="text" 

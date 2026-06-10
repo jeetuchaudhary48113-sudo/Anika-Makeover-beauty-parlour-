@@ -56,7 +56,7 @@ export const Hero: React.FC<HeroProps> = ({ heroBanner, contact, socialLinks, on
             {/* Real Full Image - Absolutely zero cropping, zero clipping, 100% visible on Mobile, Tablet & Desktop */}
             <img 
               src={bgImage} 
-              alt="Anika Luxury Makeover Studio" 
+              alt="Menka Luxury Makeover Studio" 
               className="relative z-10 max-h-[30vh] sm:max-h-[40vh] md:max-h-[50vh] w-full h-full object-contain select-none transition-transform duration-700 hover:scale-[1.02]"
               referrerPolicy="no-referrer"
             />
@@ -65,7 +65,7 @@ export const Hero: React.FC<HeroProps> = ({ heroBanner, contact, socialLinks, on
 
         {/* Short introduction paragraph */}
         <p className="max-w-2xl text-neutral-400 text-sm sm:text-base leading-relaxed mb-8 font-light">
-          Experience world-class hair designs, luxurious skin therapies, and mesmerizing custom bridal makeovers crafted in Gorakhpur by master beauty professional <strong>Anika Choudhary</strong>.
+          Experience world-class hair designs, luxurious skin therapies, and mesmerizing custom bridal makeovers crafted in Gorakhpur by master beauty professional <strong>Menka Singh</strong>.
         </p>
 
         {/* Hero Action Buttons - Replacing single button with exactly 3 premium action buttons */}

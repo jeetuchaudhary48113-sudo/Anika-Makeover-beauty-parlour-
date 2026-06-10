@@ -86,7 +86,7 @@
     },
     "Owner": {
       "title": "Owner",
-      "description": "Anika's owner story and presentation details",
+      "description": "Owner's story and presentation details",
       "type": "object",
       "properties": {
         "name": { "type": "string" },

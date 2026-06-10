@@ -149,7 +149,7 @@ Message: ${notes || "Requesting luxury makeover slot."}`;
             </div>
 
             <p className="text-sm text-neutral-300 leading-relaxed max-w-md mx-auto">
-              We have securely saved your luxury service slot in our calendar! Your WhatsApp helper has been requested to send these details to Anika Choudhary. If the window did not open, click the link button below.
+              We have securely saved your luxury service slot in our calendar! Your WhatsApp helper has been requested to send these details to Menka Singh. If the window did not open, click the link button below.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 pt-4">

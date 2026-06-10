@@ -100,7 +100,7 @@ const DEFAULT_SETTINGS: Settings = {
   announcement: "✨ Get 20% Off on Premium Bridal Bookings! Use Code: ANIKABRIDAL20 at Checkout. ✨",
   announcementVisible: true,
   metaTitle: "Anika Makeover Salon - Premium Luxury Beauty parlour in Gorakhpur",
-  metaDesc: "Discover Gorakhpur's finest makeover experience. Bridal grooming, luxury facials, styling and wellness from styling icon Anika. Book your appointment now.",
+  metaDesc: "Discover Gorakhpur's finest makeover experience. Bridal grooming, luxury facials, styling and wellness from styling icon Menka. Book your appointment now.",
   businessHours: "Open Daily: 10:00 AM - 08:30 PM (Sunday Closed for pre-bookings only)"
 };
 
@@ -118,10 +118,10 @@ const DEFAULT_SOCIAL: SocialLinks = {
 };
 
 const DEFAULT_OWNER: Owner = {
-  name: "Anika Choudhary",
+  name: "Menka Singh",
   experience: "12+ Years of Luxury Styling",
   photo: "/src/assets/images/regenerated_image_1780922025921.jpg",
-  biography: "Anika Choudhary is a verified high-end artist and beauty professional with over a decade of hands-on experience in transforming bridal portraits and global modern hairstyles. Renowned for her delicate and customized visual look matching, she established Anika Makeover Salon in Gorakhpur to cultivate a brand where self-care is elevated to absolute art.",
+  biography: "Menka Singh is a verified high-end artist and beauty professional with over a decade of hands-on experience in transforming bridal portraits and global modern hairstyles. Renowned for her delicate and customized visual look matching, she established Anika Makeover Salon in Gorakhpur to cultivate a brand where self-care is elevated to absolute art.",
   message: "Designing hair, makeup, and skin routines shouldn't just be a treatment—it's an exploration of your premium authentic beauty. Our mission at Anika Makeover Salon is to make you walk out feeling unmatched, confident, and stunningly powerful."
 };
 
@@ -335,7 +335,7 @@ const DEFAULT_REVIEWS: Review[] = [
     id: "rev-1",
     name: "Priyanka Mishra",
     rating: 5,
-    text: "Anika is literally the most professional bridal artist in Gorakhpur! She designed my wedding look so elegantly. Absolutely stunning HD makeup and hair styling. Everyone was complementing it!",
+    text: "Menka is literally the most professional bridal artist in Gorakhpur! She designed my wedding look so elegantly. Absolutely stunning HD makeup and hair styling. Everyone was complementing it!",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80",
     createdAt: "2026-05-15"
   },
@@ -609,7 +609,9 @@ export async function getServices(): Promise<Service[]> {
   }
   try {
     const querySnapshot = await getDocs(collection(db, 'services'));
-    if (querySnapshot.empty) {
+    const hasBeenSeededLocally = localStorage.getItem('anika_services_seeded') === 'true';
+    if (querySnapshot.empty && !hasBeenSeededLocally) {
+      localStorage.setItem('anika_services_seeded', 'true');
       // Seed services
       for (const s of DEFAULT_SERVICES) {
         try {
@@ -618,12 +620,15 @@ export async function getServices(): Promise<Service[]> {
           console.warn(`Seeding services/${s.id} skipped (user is likely unauthenticated):`, writeErr);
         }
       }
+      setLocalStorage<Service[]>('anika_services', DEFAULT_SERVICES);
       return DEFAULT_SERVICES;
     }
     const services: Service[] = [];
     querySnapshot.forEach((docSnap) => {
       services.push({ ...(docSnap.data() as Service), id: docSnap.id });
     });
+    localStorage.setItem('anika_services_seeded', 'true');
+    setLocalStorage<Service[]>('anika_services', services);
     return services;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, 'services');
@@ -682,7 +687,9 @@ export async function getGallery(): Promise<GalleryItem[]> {
   }
   try {
     const snap = await getDocs(collection(db, 'gallery'));
-    if (snap.empty) {
+    const hasBeenSeededLocally = localStorage.getItem('anika_gallery_seeded') === 'true';
+    if (snap.empty && !hasBeenSeededLocally) {
+      localStorage.setItem('anika_gallery_seeded', 'true');
       for (const item of DEFAULT_GALLERY) {
         try {
           await setDoc(doc(db, 'gallery', item.id), item);
@@ -690,12 +697,15 @@ export async function getGallery(): Promise<GalleryItem[]> {
           console.warn(`Seeding gallery/${item.id} skipped (user is likely unauthenticated):`, writeErr);
         }
       }
+      setLocalStorage<GalleryItem[]>('anika_gallery', DEFAULT_GALLERY);
       return DEFAULT_GALLERY;
     }
     const gallery: GalleryItem[] = [];
     snap.forEach((docSnap) => {
       gallery.push({ ...(docSnap.data() as GalleryItem), id: docSnap.id });
     });
+    localStorage.setItem('anika_gallery_seeded', 'true');
+    setLocalStorage<GalleryItem[]>('anika_gallery', gallery);
     return gallery;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, 'gallery');
@@ -740,7 +750,9 @@ export async function getReviews(): Promise<Review[]> {
   }
   try {
     const snap = await getDocs(collection(db, 'reviews'));
-    if (snap.empty) {
+    const hasBeenSeededLocally = localStorage.getItem('anika_reviews_seeded') === 'true';
+    if (snap.empty && !hasBeenSeededLocally) {
+      localStorage.setItem('anika_reviews_seeded', 'true');
       for (const item of DEFAULT_REVIEWS) {
         try {
           await setDoc(doc(db, 'reviews', item.id), item);
@@ -748,12 +760,15 @@ export async function getReviews(): Promise<Review[]> {
           console.warn(`Seeding reviews/${item.id} skipped (user is likely unauthenticated):`, writeErr);
         }
       }
+      setLocalStorage<Review[]>('anika_reviews', DEFAULT_REVIEWS);
       return DEFAULT_REVIEWS;
     }
     const reviews: Review[] = [];
     snap.forEach((docSnap) => {
       reviews.push({ ...(docSnap.data() as Review), id: docSnap.id });
     });
+    localStorage.setItem('anika_reviews_seeded', 'true');
+    setLocalStorage<Review[]>('anika_reviews', reviews);
     return reviews;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, 'reviews');
@@ -798,7 +813,9 @@ export async function getOffers(): Promise<Offer[]> {
   }
   try {
     const snap = await getDocs(collection(db, 'offers'));
-    if (snap.empty) {
+    const hasBeenSeededLocally = localStorage.getItem('anika_offers_seeded') === 'true';
+    if (snap.empty && !hasBeenSeededLocally) {
+      localStorage.setItem('anika_offers_seeded', 'true');
       for (const item of DEFAULT_OFFERS) {
         try {
           await setDoc(doc(db, 'offers', item.id), item);
@@ -806,12 +823,15 @@ export async function getOffers(): Promise<Offer[]> {
           console.warn(`Seeding offers/${item.id} skipped (user is likely unauthenticated):`, writeErr);
         }
       }
+      setLocalStorage<Offer[]>('anika_offers', DEFAULT_OFFERS);
       return DEFAULT_OFFERS;
     }
     const offers: Offer[] = [];
     snap.forEach((docSnap) => {
       offers.push({ ...(docSnap.data() as Offer), id: docSnap.id });
     });
+    localStorage.setItem('anika_offers_seeded', 'true');
+    setLocalStorage<Offer[]>('anika_offers', offers);
     return offers;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, 'offers');
@@ -1001,7 +1021,7 @@ export const DEFAULT_BUILDER_SECTIONS: WebBuilderSection[] = [
     content: {
       title: 'The Artisan Identity',
       subtitle: 'Curating Power & Fine Beauty',
-      description: 'Anika Choudhary is a verified high-end artist and beauty professional with over a decade of hands-on experience in transforming bridal portraits and global modern hairstyles.'
+      description: 'Menka Singh is a verified high-end artist and beauty professional with over a decade of hands-on experience in transforming bridal portraits and global modern hairstyles.'
     }
   },
   {
@@ -1326,10 +1346,10 @@ export const DEFAULT_VISUAL_BUILDER: VisualBuilderSettings = {
     owner: {
       heading: "The Artisan Identity",
       subheading: "Curating Power & Fine Beauty",
-      ownerName: "Anika Choudhary",
+      ownerName: "Menka Singh",
       ownerTitle: "Beauty Director",
-      ownerBio: "Anika Choudhary is a verified high-end artist and beauty professional with over a decade of hands-on experience in transforming bridal portraits and global modern hairstyles. Renowned for her delicate and customized visual look matching, she established Anika Makeover Salon in Gorakhpur to cultivate a brand where self-care is elevated to absolute art.",
-      ownerMsg: "Designing hair, makeup, and skin routines shouldn\'t just be a treatment—it\'s an exploration of your premium authentic beauty. Our mission at Anika Makeover Salon is to make you walk out feeling unmatched, confident, and stunningly powerful."
+      ownerBio: "Menka Singh is a verified high-end artist and beauty professional with over a decade of hands-on experience in transforming bridal portraits and global modern hairstyles. Renowned for her delicate and customized visual look matching, she established Anika Makeover Salon in Gorakhpur to cultivate a brand where self-care is elevated to absolute art.",
+      ownerMsg: "Designing hair, makeup, and skin routines shouldn't just be a treatment—it's an exploration of your premium authentic beauty. Our mission at Anika Makeover Salon is to make you walk out feeling unmatched, confident, and stunningly powerful."
     },
     services: {
       heading: "The Treatment Menu",

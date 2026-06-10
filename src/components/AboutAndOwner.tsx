@@ -16,7 +16,7 @@ export const AboutAndOwner: React.FC<AboutAndOwnerProps> = ({ owner }) => {
     {
       icon: <Award className="text-amber-500 w-5 h-5 shrink-0" />,
       title: "12+ Years High-End Expertise",
-      desc: "Anika has trained with industry-leading artists to deliver pixel-perfect makeover finishes."
+      desc: "Menka has trained with industry-leading artists to deliver pixel-perfect makeover finishes."
     },
     {
       icon: <ShieldCheck className="text-amber-500 w-5 h-5 shrink-0" />,
@@ -57,7 +57,7 @@ export const AboutAndOwner: React.FC<AboutAndOwnerProps> = ({ owner }) => {
             </h2>
 
             <p className="text-neutral-400 text-sm sm:text-base leading-relaxed font-light">
-              Founded under the creative guidance of director Anika Choudhary, we have built a beautiful, tranquil sanctuary in the heart of Gorakhpur (Budh Vihar near Taramandal). Our luxury salon is configured specifically for individuals who value flawless beauty treatments and holistic, organic wellness.
+              Founded under the creative guidance of director Menka Singh, we have built a beautiful, tranquil sanctuary in the heart of Gorakhpur (Budh Vihar near Taramandal). Our luxury salon is configured specifically for individuals who value flawless beauty treatments and holistic, organic wellness.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">

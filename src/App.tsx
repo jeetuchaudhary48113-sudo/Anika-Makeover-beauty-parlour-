@@ -36,7 +36,12 @@ import {
   getOffers,
   getWelcomeBanner,
   getVisualBuilder,
-  getHeroBanner
+  getHeroBanner,
+  updateSettings,
+  updateBanners,
+  updateWelcomeBanner,
+  updateHeroBanner,
+  updateVisualBuilder
 } from './lib/db';
 
 // Schema Interfaces
@@ -91,6 +96,92 @@ export default function App() {
       const dbWelcomeBanner = await getWelcomeBanner();
       const dbHeroBanner = await getHeroBanner();
       const dbVisualBuilder = await getVisualBuilder();
+
+      // Automigration/Self-Healing: Rename "Menka Makeover Salon" back to "Anika Makeover Salon" and save it to the DB
+      if (dbSettings && dbSettings.websiteName === "Menka Makeover Salon") {
+        dbSettings.websiteName = "Anika Makeover Salon";
+        dbSettings.announcement = "✨ Get 20% Off on Premium Bridal Bookings! Use Code: ANIKABRIDAL20 at Checkout. ✨";
+        dbSettings.metaTitle = "Anika Makeover Salon - Premium Luxury Beauty parlour in Gorakhpur";
+        try {
+          await updateSettings(dbSettings);
+        } catch (e) {
+          console.warn("Could not save settings migration:", e);
+        }
+      }
+
+      if (dbBanners && dbBanners.heroHeading === "Menka Makeover Salon") {
+        dbBanners.heroHeading = "Anika Makeover Salon";
+        try {
+          await updateBanners(dbBanners);
+        } catch (e) {
+          console.warn("Could not save banners migration:", e);
+        }
+      }
+
+      if (dbWelcomeBanner && dbWelcomeBanner.title.includes("Menka's")) {
+        dbWelcomeBanner.title = "Transform Your Beauty With Anika's Expert Care";
+        try {
+          await updateWelcomeBanner(dbWelcomeBanner);
+        } catch (e) {
+          console.warn("Could not save welcome banner migration:", e);
+        }
+      }
+
+      if (dbHeroBanner && dbHeroBanner.heroHeading === "Menka Makeover Salon") {
+        dbHeroBanner.heroHeading = "Anika Makeover Salon";
+        try {
+          await updateHeroBanner(dbHeroBanner);
+        } catch (e) {
+          console.warn("Could not save hero banner migration:", e);
+        }
+      }
+
+      if (dbVisualBuilder) {
+        let vbModified = false;
+        if (dbVisualBuilder.sectionsText?.hero?.heading === "Menka Makeover Salon") {
+          dbVisualBuilder.sectionsText.hero.heading = "Anika Makeover Salon";
+          vbModified = true;
+        }
+        if (dbVisualBuilder.sectionsText?.owner?.ownerBio?.includes("Menka Makeover Salon")) {
+          dbVisualBuilder.sectionsText.owner.ownerBio = dbVisualBuilder.sectionsText.owner.ownerBio.replaceAll("Menka Makeover Salon", "Anika Makeover Salon");
+          vbModified = true;
+        }
+        if (dbVisualBuilder.sectionsText?.owner?.ownerBio?.includes("established Menka Makeover")) {
+          dbVisualBuilder.sectionsText.owner.ownerBio = dbVisualBuilder.sectionsText.owner.ownerBio.replaceAll("established Menka Makeover", "established Anika Makeover");
+          vbModified = true;
+        }
+        if (dbVisualBuilder.sectionsText?.owner?.ownerMsg?.includes("Menka Makeover Salon")) {
+          dbVisualBuilder.sectionsText.owner.ownerMsg = dbVisualBuilder.sectionsText.owner.ownerMsg.replaceAll("Menka Makeover Salon", "Anika Makeover Salon");
+          vbModified = true;
+        }
+        if (dbVisualBuilder.sectionsText?.footer?.copyrightText?.includes("Menka Makeover")) {
+          dbVisualBuilder.sectionsText.footer.copyrightText = dbVisualBuilder.sectionsText.footer.copyrightText.replaceAll("Menka Makeover", "Anika Makeover");
+          vbModified = true;
+        }
+        if (dbVisualBuilder.globalSettings?.websiteName === "Menka Makeover Salon") {
+          dbVisualBuilder.globalSettings.websiteName = "Anika Makeover Salon";
+          vbModified = true;
+        }
+        if (dbVisualBuilder.globalSettings?.copyrightText?.includes("Menka Makeover")) {
+          dbVisualBuilder.globalSettings.copyrightText = dbVisualBuilder.globalSettings.copyrightText.replaceAll("Menka Makeover", "Anika Makeover");
+          vbModified = true;
+        }
+        if (dbVisualBuilder.globalSettings?.metaTitle?.includes("Menka Makeover Salon")) {
+          dbVisualBuilder.globalSettings.metaTitle = dbVisualBuilder.globalSettings.metaTitle.replaceAll("Menka Makeover Salon", "Anika Makeover Salon");
+          vbModified = true;
+        }
+        if (dbVisualBuilder.globalSettings?.metaDesc?.includes("Menka Makeover Salon")) {
+          dbVisualBuilder.globalSettings.metaDesc = dbVisualBuilder.globalSettings.metaDesc.replaceAll("Menka Makeover Salon", "Anika Makeover Salon");
+          vbModified = true;
+        }
+        if (vbModified) {
+          try {
+            await updateVisualBuilder(dbVisualBuilder);
+          } catch (e) {
+            console.warn("Could not save visual builder migration:", e);
+          }
+        }
+      }
 
       const dbServices = await getServices();
       const dbGallery = await getGallery();
