@@ -29,7 +29,11 @@ import {
   SocialLinks, 
   Offer,
   WelcomeBanner,
-  HeroBanner
+  HeroBanner,
+  InstagramSettings,
+  InstagramPost,
+  InstagramVideo,
+  InstagramReel
 } from '../types';
 
 export enum OperationType {
@@ -1602,4 +1606,280 @@ export async function updateAdminPasswordHash(newHash: string): Promise<void> {
     }
   }
 }
+
+// ==========================================
+// INSTAGRAM MANAGER PERSISTENCE SERVICES
+// ==========================================
+
+const DEFAULT_INSTAGRAM_SETTINGS: InstagramSettings = {
+  profileUrl: "https://instagram.com/anikamakeover45",
+  followButtonLink: "https://instagram.com/anikamakeover45",
+  username: "anikamakeover45",
+  heading: "Join Our Visual Instagram Journey",
+  description: "Live Feed Showcase"
+};
+
+const DEFAULT_INSTAGRAM_POSTS: InstagramPost[] = [
+  {
+    id: "ig-1",
+    image: "https://images.unsplash.com/photo-1610030469668-9253339a91a8?auto=format&fit=crop&w=400&q=80",
+    title: "Elegant Hair Styling",
+    likes: "1,420",
+    comments: "105",
+    order: 1,
+    visible: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "ig-2",
+    image: "https://images.unsplash.com/photo-1562322140-8baeececf3df?auto=format&fit=crop&w=400&q=80",
+    title: "Flawless Airbrush Base Makeup",
+    likes: "985",
+    comments: "64",
+    order: 2,
+    visible: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "ig-3",
+    image: "https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=400&q=80",
+    title: "Classic Bridal Portrait",
+    likes: "2,110",
+    comments: "250",
+    order: 3,
+    visible: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "ig-4",
+    image: "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?auto=format&fit=crop&w=400&q=80",
+    title: "Glitter Eyeshadow detailing",
+    likes: "1,150",
+    comments: "88",
+    order: 4,
+    visible: true,
+    createdAt: new Date().toISOString()
+  }
+];
+
+export async function getInstagramSettings(): Promise<InstagramSettings> {
+  if (isMockFirebase) {
+    return getLocalStorage<InstagramSettings>('anika_instagram_settings', DEFAULT_INSTAGRAM_SETTINGS);
+  }
+  try {
+    const docRef = doc(db, 'instagramSettings', 'main');
+    const snap = await getDoc(docRef);
+    if (!snap.exists()) {
+      try {
+        await setDoc(docRef, DEFAULT_INSTAGRAM_SETTINGS);
+      } catch (writeErr) {
+        console.warn("Seeding instagramSettings/main skipped:", writeErr);
+      }
+      return DEFAULT_INSTAGRAM_SETTINGS;
+    }
+    return { ...DEFAULT_INSTAGRAM_SETTINGS, ...snap.data() } as InstagramSettings;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'instagramSettings/main');
+    return getLocalStorage<InstagramSettings>('anika_instagram_settings', DEFAULT_INSTAGRAM_SETTINGS);
+  }
+}
+
+export async function updateInstagramSettings(settings: InstagramSettings): Promise<void> {
+  setLocalStorage<InstagramSettings>('anika_instagram_settings', settings);
+  if (!isMockFirebase) {
+    try {
+      await setDoc(doc(db, 'instagramSettings', 'main'), settings);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.UPDATE, 'instagramSettings/main');
+    }
+  }
+}
+
+export async function getInstagramPosts(): Promise<InstagramPost[]> {
+  if (isMockFirebase) {
+    const local = getLocalStorage<InstagramPost[]>('anika_instagram_posts', DEFAULT_INSTAGRAM_POSTS);
+    return local.sort((a, b) => a.order - b.order);
+  }
+  try {
+    const snap = await getDocs(collection(db, 'instagramPosts'));
+    const hasBeenSeededLocally = localStorage.getItem('anika_instagram_posts_seeded') === 'true';
+    if (snap.empty && !hasBeenSeededLocally) {
+      localStorage.setItem('anika_instagram_posts_seeded', 'true');
+      for (const item of DEFAULT_INSTAGRAM_POSTS) {
+        try {
+          await setDoc(doc(db, 'instagramPosts', item.id), item);
+        } catch (writeErr) {
+          console.warn(`Seeding instagramPosts/${item.id} skipped:`, writeErr);
+        }
+      }
+      setLocalStorage<InstagramPost[]>('anika_instagram_posts', DEFAULT_INSTAGRAM_POSTS);
+      return DEFAULT_INSTAGRAM_POSTS;
+    }
+    const posts: InstagramPost[] = [];
+    snap.forEach((docSnap) => {
+      posts.push({ ...(docSnap.data() as InstagramPost), id: docSnap.id });
+    });
+    localStorage.setItem('anika_instagram_posts_seeded', 'true');
+    const sorted = posts.sort((a, b) => a.order - b.order);
+    setLocalStorage<InstagramPost[]>('anika_instagram_posts', sorted);
+    return sorted;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'instagramPosts');
+    return getLocalStorage<InstagramPost[]>('anika_instagram_posts', DEFAULT_INSTAGRAM_POSTS).sort((a, b) => a.order - b.order);
+  }
+}
+
+export async function saveInstagramPost(post: InstagramPost): Promise<void> {
+  const current = await getInstagramPosts();
+  const existingIdx = current.findIndex(p => p.id === post.id);
+  let updated: InstagramPost[];
+  if (existingIdx > -1) {
+    updated = current.map(p => p.id === post.id ? post : p);
+  } else {
+    updated = [...current, post];
+  }
+  setLocalStorage<InstagramPost[]>('anika_instagram_posts', updated);
+
+  if (!isMockFirebase) {
+    try {
+      await setDoc(doc(db, 'instagramPosts', post.id), post);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `instagramPosts/${post.id}`);
+    }
+  }
+}
+
+export async function deleteInstagramPost(id: string): Promise<void> {
+  const current = await getInstagramPosts();
+  const updated = current.filter(p => p.id !== id);
+  setLocalStorage<InstagramPost[]>('anika_instagram_posts', updated);
+
+  if (!isMockFirebase) {
+    try {
+      await deleteDoc(doc(db, 'instagramPosts', id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `instagramPosts/${id}`);
+    }
+  }
+}
+
+export async function reorderInstagramPosts(posts: InstagramPost[]): Promise<void> {
+  const ordered = posts.map((p, idx) => ({ ...p, order: idx + 1 }));
+  setLocalStorage<InstagramPost[]>('anika_instagram_posts', ordered);
+
+  if (!isMockFirebase) {
+    for (const post of ordered) {
+      try {
+        await setDoc(doc(db, 'instagramPosts', post.id), post);
+      } catch (e) {
+        console.error(`Failed to update order for post ${post.id}:`, e);
+      }
+    }
+  }
+}
+
+export async function getInstagramVideos(): Promise<InstagramVideo[]> {
+  if (isMockFirebase) {
+    return getLocalStorage<InstagramVideo[]>('anika_instagram_videos', []);
+  }
+  try {
+    const snap = await getDocs(collection(db, 'instagramVideos'));
+    const videos: InstagramVideo[] = [];
+    snap.forEach((docSnap) => {
+      videos.push({ ...(docSnap.data() as InstagramVideo), id: docSnap.id });
+    });
+    setLocalStorage<InstagramVideo[]>('anika_instagram_videos', videos);
+    return videos;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'instagramVideos');
+    return getLocalStorage<InstagramVideo[]>('anika_instagram_videos', []);
+  }
+}
+
+export async function saveInstagramVideo(video: InstagramVideo): Promise<void> {
+  const current = await getInstagramVideos();
+  const existingIdx = current.findIndex(v => v.id === video.id);
+  let updated: InstagramVideo[];
+  if (existingIdx > -1) {
+    updated = current.map(v => v.id === video.id ? video : v);
+  } else {
+    updated = [...current, video];
+  }
+  setLocalStorage<InstagramVideo[]>('anika_instagram_videos', updated);
+
+  if (!isMockFirebase) {
+    try {
+      await setDoc(doc(db, 'instagramVideos', video.id), video);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `instagramVideos/${video.id}`);
+    }
+  }
+}
+
+export async function deleteInstagramVideo(id: string): Promise<void> {
+  const current = await getInstagramVideos();
+  const updated = current.filter(v => v.id !== id);
+  setLocalStorage<InstagramVideo[]>('anika_instagram_videos', updated);
+
+  if (!isMockFirebase) {
+    try {
+      await deleteDoc(doc(db, 'instagramVideos', id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `instagramVideos/${id}`);
+    }
+  }
+}
+
+export async function getInstagramReels(): Promise<InstagramReel[]> {
+  if (isMockFirebase) {
+    return getLocalStorage<InstagramReel[]>('anika_instagram_reels', []);
+  }
+  try {
+    const snap = await getDocs(collection(db, 'instagramReels'));
+    const reels: InstagramReel[] = [];
+    snap.forEach((docSnap) => {
+      reels.push({ ...(docSnap.data() as InstagramReel), id: docSnap.id });
+    });
+    setLocalStorage<InstagramReel[]>('anika_instagram_reels', reels);
+    return reels;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, 'instagramReels');
+    return getLocalStorage<InstagramReel[]>('anika_instagram_reels', []);
+  }
+}
+
+export async function saveInstagramReel(reel: InstagramReel): Promise<void> {
+  const current = await getInstagramReels();
+  const existingIdx = current.findIndex(r => r.id === reel.id);
+  let updated: InstagramReel[];
+  if (existingIdx > -1) {
+    updated = current.map(r => r.id === reel.id ? reel : r);
+  } else {
+    updated = [...current, reel];
+  }
+  setLocalStorage<InstagramReel[]>('anika_instagram_reels', updated);
+
+  if (!isMockFirebase) {
+    try {
+      await setDoc(doc(db, 'instagramReels', reel.id), reel);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `instagramReels/${reel.id}`);
+    }
+  }
+}
+
+export async function deleteInstagramReel(id: string): Promise<void> {
+  const current = await getInstagramReels();
+  const updated = current.filter(r => r.id !== id);
+  setLocalStorage<InstagramReel[]>('anika_instagram_reels', updated);
+
+  if (!isMockFirebase) {
+    try {
+      await deleteDoc(doc(db, 'instagramReels', id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `instagramReels/${id}`);
+    }
+  }
+}
+
 

@@ -38,7 +38,12 @@ import {
   Sliders,
   Type,
   Loader2,
-  Crown
+  Crown,
+  Instagram,
+  Film,
+  Video,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { auth, isMockFirebase } from '../lib/firebase';
 import { 
@@ -54,7 +59,11 @@ import {
   Offer,
   WelcomeBanner,
   VisualBuilderSettings,
-  HeroBanner
+  HeroBanner,
+  InstagramSettings,
+  InstagramPost,
+  InstagramVideo,
+  InstagramReel
 } from '../types';
 import { VisualBuilderTab } from './VisualBuilderTab';
 import {
@@ -84,7 +93,19 @@ import {
   getAdminPasswordHash,
   updateAdminPasswordHash,
   getHeroBanner,
-  updateHeroBanner
+  updateHeroBanner,
+  getInstagramSettings,
+  updateInstagramSettings,
+  getInstagramPosts,
+  saveInstagramPost,
+  deleteInstagramPost,
+  reorderInstagramPosts,
+  getInstagramVideos,
+  saveInstagramVideo,
+  deleteInstagramVideo,
+  getInstagramReels,
+  saveInstagramReel,
+  deleteInstagramReel
 } from '../lib/db';
 import { hashPassword, isSessionAuthenticated, setSessionAuthenticated } from '../lib/auth';
 import { DirectFileUploader } from './DirectFileUploader';
@@ -139,7 +160,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
 
   // Active Tab state
-  const [activeSubTab, setActiveSubTab] = useState<'appointments' | 'services' | 'gallery' | 'settings' | 'offers' | 'reviews' | 'builder' | 'heroWelcomeBanner'>('appointments');
+  const [activeSubTab, setActiveSubTab] = useState<'appointments' | 'services' | 'gallery' | 'settings' | 'offers' | 'reviews' | 'builder' | 'heroWelcomeBanner' | 'instagram'>('appointments');
 
   // Dynamic lists from storage
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -147,6 +168,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+
+  // Instagram dynamic states and forms input bindings
+  const [instagramSettings, setInstagramSettingsState] = useState<InstagramSettings>({
+    profileUrl: '',
+    followButtonLink: '',
+    username: '',
+    heading: '',
+    description: ''
+  });
+  const [instagramPosts, setInstagramPosts] = useState<InstagramPost[]>([]);
+  const [instagramVideos, setInstagramVideos] = useState<InstagramVideo[]>([]);
+  const [instagramReels, setInstagramReels] = useState<InstagramReel[]>([]);
+
+  // Temporary single new item creation/edit fields
+  const [newPostImage, setNewPostImage] = useState('');
+  const [newPostTitle, setNewPostTitle] = useState('');
+  const [newPostLikes, setNewPostLikes] = useState('1,200');
+  const [newPostComments, setNewPostComments] = useState('80');
+  
+  const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [newVideoTitle, setNewVideoTitle] = useState('');
+
+  const [newReelUrl, setNewReelUrl] = useState('');
+  const [newReelTitle, setNewReelTitle] = useState('');
+  const [newReelDescription, setNewReelDescription] = useState('');
+
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingPost, setIsSavingPost] = useState(false);
+  const [isSavingVideo, setIsSavingVideo] = useState(false);
+  const [isSavingReel, setIsSavingReel] = useState(false);
+
+  const [igStatusMsg, setIgStatusMsg] = useState<{ type: 'success' | 'error' | 'loading' | null; message: string }>({ type: null, message: '' });
 
   // Local editable form bindings
   const [editableSettings, setEditableSettings] = useState<Settings>(initialSettings);
@@ -238,11 +291,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const revs = await getReviews();
       const offs = await getOffers();
 
+      const igSet = await getInstagramSettings();
+      const igPst = await getInstagramPosts();
+      const igVid = await getInstagramVideos();
+      const igRel = await getInstagramReels();
+
       setAppointments(appts);
       setServices(srvs);
       setGallery(gals);
       setReviews(revs);
       setOffers(offs);
+
+      setInstagramSettingsState(igSet);
+      setInstagramPosts(igPst);
+      setInstagramVideos(igVid);
+      setInstagramReels(igRel);
     } catch (e) {
       console.error(e);
     }
@@ -350,6 +413,219 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setConfirmPasswordInput('');
     } catch (err) {
       alert("Failed to change password.");
+    }
+  };
+
+  // --- INSTAGRAM SERVICES HANDLERS ---
+  const handleSaveInstagramSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingSettings(true);
+    setIgStatusMsg({ type: 'loading', message: 'Saving Profile Settings...' });
+    try {
+      await updateInstagramSettings(instagramSettings);
+      setToastType('success');
+      setToastMessage("📸 Instagram Profile Settings updated successfully!");
+      setIgStatusMsg({ type: 'success', message: 'Settings saved and synced in real-time!' });
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed to save settings: " + (err?.message || err));
+      setIgStatusMsg({ type: 'error', message: 'Error updating settings.' });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleSaveInstagramPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostImage) {
+      alert("Please upload an image from your device first.");
+      return;
+    }
+    setIsSavingPost(true);
+    setIgStatusMsg({ type: 'loading', message: 'Uploading Instagram Post...' });
+    try {
+      const newPost: InstagramPost = {
+        id: 'ig-pst-' + Date.now(),
+        image: newPostImage,
+        title: newPostTitle,
+        likes: newPostLikes,
+        comments: newPostComments,
+        visible: true,
+        order: instagramPosts.length + 1,
+        createdAt: new Date().toISOString()
+      };
+      await saveInstagramPost(newPost);
+      // reload
+      const postsList = await getInstagramPosts();
+      setInstagramPosts(postsList);
+      
+      // reset form
+      setNewPostImage('');
+      setNewPostTitle('');
+      setNewPostLikes('1,200');
+      setNewPostComments('80');
+
+      setToastType('success');
+      setToastMessage("✨ New Instagram Photo Post published live!");
+      setIgStatusMsg({ type: 'success', message: 'Post uploaded successfully!' });
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed uploading post: " + (err?.message || err));
+      setIgStatusMsg({ type: 'error', message: 'Error uploading post.' });
+    } finally {
+      setIsSavingPost(false);
+    }
+  };
+
+  const handleTogglePostVisibility = async (post: InstagramPost) => {
+    try {
+      const updated = { ...post, visible: post.visible === false ? true : false };
+      await saveInstagramPost(updated);
+      const postsList = await getInstagramPosts();
+      setInstagramPosts(postsList);
+      setToastType('success');
+      setToastMessage(`Post has been ${updated.visible ? 'Published' : 'Hidden'} successfully.`);
+    } catch (err: any) {
+      alert("Failed toggling visibility: " + err?.message);
+    }
+  };
+
+  const handleEditPostTitle = async (post: InstagramPost, newTitle: string) => {
+    try {
+      const updated = { ...post, title: newTitle };
+      await saveInstagramPost(updated);
+      const postsList = await getInstagramPosts();
+      setInstagramPosts(postsList);
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
+
+  const handleDeletePost = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this Instagram image post?")) return;
+    try {
+      await deleteInstagramPost(id);
+      const postsList = await getInstagramPosts();
+      setInstagramPosts(postsList);
+      setToastType('success');
+      setToastMessage("Post deleted successfully.");
+    } catch (err: any) {
+      alert("Error deleting post: " + err?.message);
+    }
+  };
+
+  const handleMovePost = async (index: number, direction: 'up' | 'down') => {
+    const newPostsList = [...instagramPosts];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= newPostsList.length) return;
+
+    // swap
+    const temp = newPostsList[index];
+    newPostsList[index] = newPostsList[targetIdx];
+    newPostsList[targetIdx] = temp;
+
+    try {
+      await reorderInstagramPosts(newPostsList);
+      const reordered = await getInstagramPosts();
+      setInstagramPosts(reordered);
+    } catch (err: any) {
+      alert("Failed to reorder posts: " + err?.message);
+    }
+  };
+
+  const handleSaveInstagramVideo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVideoUrl) {
+      alert("Please upload a video from your device first.");
+      return;
+    }
+    setIsSavingVideo(true);
+    setIgStatusMsg({ type: 'loading', message: 'Saving Video...' });
+    try {
+      const newVid: InstagramVideo = {
+        id: 'ig-vid-' + Date.now(),
+        video: newVideoUrl,
+        title: newVideoTitle || 'Luxury Salon Highlight',
+        createdAt: new Date().toISOString()
+      };
+      await saveInstagramVideo(newVid);
+      const vidsList = await getInstagramVideos();
+      setInstagramVideos(vidsList);
+
+      setNewVideoUrl('');
+      setNewVideoTitle('');
+
+      setToastType('success');
+      setToastMessage("🎥 New Instagram Video added successfully!");
+      setIgStatusMsg({ type: 'success', message: 'Video saved successfully!' });
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed uploading video: " + (err?.message || err));
+      setIgStatusMsg({ type: 'error', message: 'Error uploading video.' });
+    } finally {
+      setIsSavingVideo(false);
+    }
+  };
+
+  const handleDeleteVideo = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this video?")) return;
+    try {
+      await deleteInstagramVideo(id);
+      const vidsList = await getInstagramVideos();
+      setInstagramVideos(vidsList);
+      setToastType('success');
+      setToastMessage("Video removed successfully.");
+    } catch (err: any) {
+      alert("Error deleting video: " + err?.message);
+    }
+  };
+
+  const handleSaveInstagramReel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReelUrl) {
+      alert("Please upload a reel video from your device first.");
+      return;
+    }
+    setIsSavingReel(true);
+    setIgStatusMsg({ type: 'loading', message: 'Saving Reel...' });
+    try {
+      const newReel: InstagramReel = {
+        id: 'ig-rel-' + Date.now(),
+        video: newReelUrl,
+        title: newReelTitle || 'Dynamic Reel',
+        description: newReelDescription,
+        createdAt: new Date().toISOString()
+      };
+      await saveInstagramReel(newReel);
+      const reelsList = await getInstagramReels();
+      setInstagramReels(reelsList);
+
+      setNewReelUrl('');
+      setNewReelTitle('');
+      setNewReelDescription('');
+
+      setToastType('success');
+      setToastMessage("🎬 Reel published successfully!");
+      setIgStatusMsg({ type: 'success', message: 'Reel saved successfully!' });
+    } catch (err: any) {
+      setToastType('error');
+      setToastMessage("Failed uploading reel: " + (err?.message || err));
+      setIgStatusMsg({ type: 'error', message: 'Error uploading reel.' });
+    } finally {
+      setIsSavingReel(false);
+    }
+  };
+
+  const handleDeleteReel = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this Instagram reel?")) return;
+    try {
+      await deleteInstagramReel(id);
+      const reelsList = await getInstagramReels();
+      setInstagramReels(reelsList);
+      setToastType('success');
+      setToastMessage("Reel removed successfully.");
+    } catch (err: any) {
+      alert("Error deleting reel: " + err?.message);
     }
   };
 
@@ -906,6 +1182,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               { id: 'offers', label: 'Offers Coupons', icon: <Percent size={13} /> },
               { id: 'reviews', label: 'Guest Feedback', icon: <MessageSquare size={13} /> },
               { id: 'settings', label: 'Website Settings & Banners', icon: <SettingIcon size={13} /> },
+              { id: 'instagram', label: 'Instagram Manager', icon: <Instagram size={13} /> },
             ].map((sub) => (
               <button
                 key={sub.id}
@@ -3147,6 +3424,523 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
 
             </form>
+          )}
+
+          {/* E. INSTAGRAM MANAGER SECTION (100% PERSISTENT & MANAGED) */}
+          {activeSubTab === 'instagram' && (
+            <div className="space-y-8 animate-fadeIn">
+              
+              {/* Header Status Bar */}
+              <div className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-serif font-bold text-lg text-neutral-100 flex items-center gap-2">
+                    <Instagram className="text-pink-500 animate-spin-slow" size={20} />
+                    <span>Dynamic Instagram Stream Editor</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Manage your live visual components, reels, direct-uploaded clips, and customized profile follow metrics. All changes sync in real-time.
+                  </p>
+                </div>
+                
+                {igStatusMsg.type && (
+                  <div className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border select-none ${
+                    igStatusMsg.type === 'loading' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                    igStatusMsg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                    'bg-red-500/10 text-red-450 border-red-500/20'
+                  }`}>
+                    {igStatusMsg.type === 'loading' ? <Loader2 size={13} className="animate-spin text-amber-500" /> : '✓'}
+                    <span>{igStatusMsg.message}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Grid content container */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                {/* 1. LEFT COLUMN: MANAGING CONFIGS & CREATIVE LOADS */}
+                <div className="space-y-8">
+                  
+                  {/* CARD A: PROFILE PATHS AND META TEXTS */}
+                  <form onSubmit={handleSaveInstagramSettings} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
+                    <div className="border-b border-neutral-800 pb-3">
+                      <h4 className="font-serif font-semibold text-sm text-amber-500">A. Profile Details & Banner Settings</h4>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Instagram Username</label>
+                        <input 
+                          type="text" 
+                          value={instagramSettings.username || ''}
+                          onChange={(e) => setInstagramSettingsState({ ...instagramSettings, username: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 mt-1 focus:outline-none focus:border-amber-500"
+                          placeholder="e.g. anikamakeover45"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Instagram Profile URL</label>
+                          <input 
+                            type="text" 
+                            value={instagramSettings.profileUrl || ''}
+                            onChange={(e) => setInstagramSettingsState({ ...instagramSettings, profileUrl: e.target.value })}
+                            className="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 mt-1 focus:outline-none focus:border-amber-500"
+                            placeholder="https://instagram.com/..."
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Follow Button Link</label>
+                          <input 
+                            type="text" 
+                            value={instagramSettings.followButtonLink || ''}
+                            onChange={(e) => setInstagramSettingsState({ ...instagramSettings, followButtonLink: e.target.value })}
+                            className="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 mt-1 focus:outline-none focus:border-amber-500"
+                            placeholder="https://instagram.com/..."
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Section Display Heading</label>
+                          <input 
+                            type="text" 
+                            value={instagramSettings.heading || ''}
+                            onChange={(e) => setInstagramSettingsState({ ...instagramSettings, heading: e.target.value })}
+                            className="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 mt-1 focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Section Description</label>
+                          <input 
+                            type="text" 
+                            value={instagramSettings.description || ''}
+                            onChange={(e) => setInstagramSettingsState({ ...instagramSettings, description: e.target.value })}
+                            className="w-full px-4 py-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-200 mt-1 focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={isSavingSettings}
+                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-[10px] rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        {isSavingSettings ? <Loader2 size={13} className="animate-spin text-neutral-950" /> : <Check size={13} />}
+                        <span>Save Profile Settings</span>
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* CARD B: UPLOAD INSTAGRAM IMAGES (PHOTOS CONTAINER) */}
+                  <form onSubmit={handleSaveInstagramPost} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
+                    <div className="border-b border-neutral-800 pb-3">
+                      <h4 className="font-serif font-semibold text-sm text-amber-500">B. Upload New Photo Post</h4>
+                    </div>
+
+                    {/* Direct Upload tool integration */}
+                    <DirectFileUploader 
+                      label="Upload Image (JPG/PNG from your local desktop or mobile phone)"
+                      accept="image/*"
+                      folder="instagram/photos"
+                      currentValue={newPostImage}
+                      onUploadComplete={(url) => {
+                        setNewPostImage(url);
+                        setIgStatusMsg({ type: 'success', message: 'Image uploaded and processed! Enter details to save.' });
+                      }}
+                    />
+
+                    {newPostImage && (
+                      <div className="p-4 bg-neutral-950 border border-neutral-850 rounded-xl space-y-3">
+                        <span className="text-[9px] uppercase font-bold text-amber-500 font-mono tracking-widest block">Upload Preview:</span>
+                        
+                        <div className="flex gap-4">
+                          <img 
+                            src={newPostImage} 
+                            alt="Uploaded post preview" 
+                            className="w-24 h-24 rounded-lg object-cover border border-neutral-850"
+                            referrerPolicy="no-referrer"
+                          />
+
+                          <div className="flex-1 space-y-2">
+                            <div>
+                              <label className="text-[9px] uppercase font-bold text-neutral-450 tracking-wider">Photo Title</label>
+                              <input 
+                                type="text" 
+                                value={newPostTitle}
+                                onChange={(e) => setNewPostTitle(e.target.value)}
+                                className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-200 mt-0.5 focus:outline-none"
+                                placeholder="Classic Bridal Hair-dos..."
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-[9px] uppercase font-bold text-neutral-450 tracking-wider">Mock Likes Count</label>
+                                <input 
+                                  type="text" 
+                                  value={newPostLikes}
+                                  onChange={(e) => setNewPostLikes(e.target.value)}
+                                  className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-200 mt-0.5 focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[9px] uppercase font-bold text-neutral-450 tracking-wider">Mock Comments</label>
+                                <input 
+                                  type="text" 
+                                  value={newPostComments}
+                                  onChange={(e) => setNewPostComments(e.target.value)}
+                                  className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-200 mt-0.5 focus:outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2">
+                          <button
+                            type="submit"
+                            disabled={isSavingPost}
+                            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-[10px] rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            {isSavingPost ? <Loader2 size={13} className="animate-spin text-neutral-950" /> : <Check size={13} />}
+                            <span>Save Photo Post</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewPostImage('');
+                              setIgStatusMsg({ type: 'success', message: 'Upload reset.' });
+                            }}
+                            className="px-4 py-2.5 bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white font-bold uppercase tracking-wider text-[10px] rounded-xl cursor-pointer"
+                          >
+                            <X size={12} className="inline mr-1" />
+                            <span>Delete & Reset</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </form>
+
+                  {/* CARD C: UPLOAD INSTAGRAM VIDEOS */}
+                  <form onSubmit={handleSaveInstagramVideo} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
+                    <div className="border-b border-neutral-800 pb-3">
+                      <h4 className="font-serif font-semibold text-sm text-amber-500">C. Upload New Video</h4>
+                    </div>
+
+                    <DirectFileUploader 
+                      label="Upload Clip (MP4/WebM directly)"
+                      accept="video/*"
+                      folder="instagram/videos"
+                      currentValue={newVideoUrl}
+                      onUploadComplete={(url) => {
+                        setNewVideoUrl(url);
+                        setIgStatusMsg({ type: 'success', message: 'Video file parsed and loaded. Fill title to save!' });
+                      }}
+                    />
+
+                    {newVideoUrl && (
+                      <div className="p-4 bg-neutral-950 border border-neutral-850 rounded-xl space-y-3">
+                        <span className="text-[9px] uppercase font-bold text-amber-500 font-mono tracking-widest block">Video Playback Preview:</span>
+                        
+                        <div className="aspect-video w-full max-w-sm rounded-lg overflow-hidden border border-neutral-850 bg-black">
+                          <video src={newVideoUrl} controls className="w-full h-full object-cover" />
+                        </div>
+
+                        <div>
+                          <label className="text-[9px] uppercase font-bold text-neutral-450 tracking-wider">Video Title / Caption</label>
+                          <input 
+                            type="text" 
+                            required
+                            value={newVideoTitle}
+                            onChange={(e) => setNewVideoTitle(e.target.value)}
+                            className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-200 mt-0.5 focus:outline-none focus:border-amber-500"
+                            placeholder="Anika Makeovers Gorakhpur Promo Spotlight..."
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="submit"
+                            disabled={isSavingVideo}
+                            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-[10px] rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            {isSavingVideo ? <Loader2 size={13} className="animate-spin text-neutral-950" /> : <Check size={13} />}
+                            <span>Save Dynamic Video</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewVideoUrl('');
+                              setIgStatusMsg({ type: 'success', message: 'Video upload reset successfully.' });
+                            }}
+                            className="px-4 py-2.5 bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white font-bold uppercase tracking-wider text-[10px] rounded-xl cursor-pointer"
+                          >
+                            <X size={12} className="inline mr-1" />
+                            <span>Delete & Reset</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </form>
+
+                  {/* CARD D: UPLOAD REELS */}
+                  <form onSubmit={handleSaveInstagramReel} className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
+                    <div className="border-b border-neutral-800 pb-3">
+                      <h4 className="font-serif font-semibold text-sm text-amber-500">D. Upload Immersive Reel</h4>
+                    </div>
+
+                    <DirectFileUploader 
+                      label="Upload Vertical Clip (Ideal aspect-ratio format: 9:16)"
+                      accept="video/*"
+                      folder="instagram/reels"
+                      currentValue={newReelUrl}
+                      onUploadComplete={(url) => {
+                        setNewReelUrl(url);
+                        setIgStatusMsg({ type: 'success', message: 'Vertical reel loaded successfully. Fill details below.' });
+                      }}
+                    />
+
+                    {newReelUrl && (
+                      <div className="p-4 bg-neutral-950 border border-neutral-850 rounded-xl space-y-3">
+                        <span className="text-[9px] uppercase font-bold text-amber-500 font-mono tracking-widest block">Reel Vertical Preview:</span>
+                        
+                        <div className="flex gap-4">
+                          <div className="aspect-[9/16] w-24 rounded-lg overflow-hidden border border-neutral-850 bg-black shrink-0 relative">
+                            <video src={newReelUrl} muted playsInline className="w-full h-full object-cover" />
+                          </div>
+
+                          <div className="flex-1 space-y-2">
+                            <div>
+                              <label className="text-[9px] uppercase font-bold text-neutral-450 tracking-wider">Reel Title</label>
+                              <input 
+                                type="text" 
+                                required
+                                value={newReelTitle}
+                                onChange={(e) => setNewReelTitle(e.target.value)}
+                                className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-200 mt-0.5 focus:outline-none"
+                                placeholder="Bridal Airbrush Glow..."
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] uppercase font-bold text-neutral-450 tracking-wider">Description</label>
+                              <textarea 
+                                value={newReelDescription}
+                                onChange={(e) => setNewReelDescription(e.target.value)}
+                                className="w-full px-3 py-1.5 bg-neutral-900 border border-neutral-800 rounded-lg text-xs text-neutral-200 mt-0.5 focus:outline-none h-16 font-light"
+                                placeholder="Bridal luxury makeup with gorgeous lash enhancements..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="submit"
+                            disabled={isSavingReel}
+                            className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold uppercase tracking-wider text-[10px] rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            {isSavingReel ? <Loader2 size={13} className="animate-spin text-neutral-950" /> : <Check size={13} />}
+                            <span>Save Immersive Reel</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewReelUrl('');
+                              setIgStatusMsg({ type: 'success', message: 'Reel upload reset.' });
+                            }}
+                            className="px-4 py-2.5 bg-neutral-900 border border-neutral-850 hover:bg-neutral-800 text-neutral-400 hover:text-white font-bold uppercase tracking-wider text-[10px] rounded-xl cursor-pointer"
+                          >
+                            <X size={12} className="inline mr-1" />
+                            <span>Delete & Reset</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </form>
+
+                </div>
+
+                {/* 2. RIGHT COLUMN: SHOW ALL LOGS & FEEDS */}
+                <div className="space-y-8">
+                  
+                  {/* CARD E: FEED MANAGEMENT (PHOTOS REORDERING & VISIBILITY CONTROL) */}
+                  <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
+                    <div className="border-b border-neutral-800 pb-3 flex items-center justify-between">
+                      <h4 className="font-serif font-semibold text-sm text-amber-500">E. Photo Feed Display & Sequence Manager</h4>
+                      <span className="text-[10px] uppercase font-mono text-neutral-500 font-semibold">{instagramPosts.length} Items total</span>
+                    </div>
+
+                    {instagramPosts.length === 0 ? (
+                      <p className="text-neutral-500 italic text-center py-6 text-xs font-serif">No images found. Upload your first device photo using the form!</p>
+                    ) : (
+                      <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+                        {instagramPosts.map((post, idx) => (
+                          <div 
+                            key={post.id}
+                            className={`p-3 rounded-xl border flex items-center gap-3 bg-neutral-950 transition-all ${
+                              post.visible === false ? 'border-neutral-900 opacity-60' : 'border-neutral-850 hover:border-neutral-800'
+                            }`}
+                          >
+                            {/* Sequence preview thumbnail */}
+                            <img 
+                              src={post.image} 
+                              alt="Feed post thumbnail" 
+                              className="w-12 h-12 rounded-lg object-cover shrink-0 bg-neutral-900 border border-neutral-850"
+                            />
+
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <input 
+                                type="text" 
+                                value={post.title || ''}
+                                onChange={(e) => handleEditPostTitle(post, e.target.value)}
+                                className="block font-serif text-xs font-semibold text-neutral-200 bg-transparent focus:bg-neutral-900 p-1 rounded w-full border-none focus:outline-none"
+                              />
+                              <div className="flex items-center gap-2 text-[9px] font-mono text-neutral-500 mt-1 pl-1">
+                                <span>Likes: {post.likes}</span>
+                                <span>•</span>
+                                <span>Comments: {post.comments}</span>
+                              </div>
+                            </div>
+
+                            {/* Order adjusters, toggle, delete */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              
+                              {/* Reorder Up */}
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMovePost(idx, 'up')}
+                                className="p-1 px-1.5 bg-neutral-900 border border-neutral-800 rounded text-neutral-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                                title="Move post sequence up"
+                              >
+                                <ArrowUp size={11} />
+                              </button>
+
+                              {/* Reorder Down */}
+                              <button
+                                type="button"
+                                disabled={idx === instagramPosts.length - 1}
+                                onClick={() => handleMovePost(idx, 'down')}
+                                className="p-1 px-1.5 bg-neutral-900 border border-neutral-800 rounded text-neutral-400 hover:text-white disabled:opacity-30 cursor-pointer"
+                                title="Move post sequence down"
+                              >
+                                <ArrowDown size={11} />
+                              </button>
+
+                              {/* Visibility toggler (Hide Post / Publish Post) */}
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePostVisibility(post)}
+                                className={`p-1 px-2 text-[10px] font-bold uppercase rounded border transition-all cursor-pointer ${
+                                  post.visible === false 
+                                    ? 'bg-neutral-950 border-neutral-900 text-neutral-500 hover:bg-neutral-900 hover:text-neutral-300' 
+                                    : 'bg-emerald-950/40 border-emerald-500/20 text-emerald-400 hover:bg-neutral-900 hover:text-neutral-350'
+                                }`}
+                                title={post.visible === false ? "Publish to online website portfolio" : "Hide from website portfolio store"}
+                              >
+                                {post.visible === false ? "Hidden" : "Published"}
+                              </button>
+
+                              {/* Delete post */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePost(post.id)}
+                                className="p-1.5 bg-neutral-950 hover:bg-red-950/20 border border-neutral-850 hover:border-red-950 text-neutral-505 hover:text-red-400 rounded-lg transition-colors cursor-pointer"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CARD F: REELS & VIDEOS STREAM LISTINGS */}
+                  <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-6">
+                    <div>
+                      <div className="border-b border-neutral-800 pb-3 flex items-center justify-between">
+                        <h4 className="font-serif font-semibold text-sm text-amber-500">F1. Live Interactive Reels</h4>
+                        <span className="text-[10px] uppercase font-mono text-neutral-500 font-semibold">{instagramReels.length} Reels</span>
+                      </div>
+
+                      {instagramReels.length === 0 ? (
+                        <p className="text-neutral-500 italic text-center py-6 text-xs font-serif">No reels uploaded yet.</p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-4 mt-3 max-h-[360px] overflow-y-auto pr-1">
+                          {instagramReels.map((reel) => (
+                            <div key={reel.id} className="p-3 bg-neutral-950 border border-neutral-850 rounded-xl relative flex flex-col justify-between space-y-2">
+                              <div className="aspect-[9/16] w-full rounded-lg overflow-hidden bg-black border border-neutral-900 relative">
+                                <video src={reel.video} muted controls className="w-full h-full object-cover" />
+                              </div>
+                              <div className="space-y-1">
+                                <h5 className="font-serif font-bold text-xs text-neutral-200 line-clamp-1">{reel.title}</h5>
+                                <p className="text-[9px] text-neutral-505 line-clamp-1 leading-normal">{reel.description || 'No description listed.'}</p>
+                              </div>
+                              <div className="pt-1.5 border-t border-neutral-900">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteReel(reel.id)}
+                                  className="w-full py-1 bg-neutral-900 hover:bg-red-950/10 border border-neutral-850 hover:border-red-900 text-neutral-500 hover:text-red-400 text-[10px] font-bold uppercase rounded-lg cursor-pointer flex items-center justify-center gap-1"
+                                >
+                                  <Trash2 size={10} />
+                                  <span>Remove Reel</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="border-b border-neutral-800 pb-3 flex items-center justify-between">
+                        <h4 className="font-serif font-semibold text-sm text-amber-500">F2. Dynamic Videos Catalog</h4>
+                        <span className="text-[10px] uppercase font-mono text-neutral-500 font-semibold">{instagramVideos.length} Videos</span>
+                      </div>
+
+                      {instagramVideos.length === 0 ? (
+                        <p className="text-neutral-500 italic text-center py-6 text-xs font-serif">No video uploads found.</p>
+                      ) : (
+                        <div className="space-y-3.5 mt-3 max-h-[280px] overflow-y-auto pr-1">
+                          {instagramVideos.map((vid) => (
+                            <div key={vid.id} className="p-3 bg-neutral-950 border border-neutral-850 rounded-xl flex gap-3 items-center justify-between">
+                              <div className="aspect-video w-24 rounded-lg overflow-hidden bg-black border border-neutral-905 shrink-0">
+                                <video src={vid.video} muted className="w-full h-full object-cover" />
+                              </div>
+                              <div className="flex-1 min-w-0 pr-2">
+                                <h5 className="font-serif font-bold text-xs text-neutral-200 line-clamp-1">{vid.title}</h5>
+                                <span className="text-[9px] font-mono text-neutral-500">{vid.createdAt ? new Date(vid.createdAt).toLocaleDateString() : 'N/A'}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteVideo(vid.id)}
+                                className="p-2 bg-neutral-900 hover:bg-red-950/15 border border-neutral-850 hover:border-red-950 text-neutral-450 hover:text-red-400 rounded-lg shrink-0 cursor-pointer"
+                                title="Remove video"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
           )}
 
         </div>

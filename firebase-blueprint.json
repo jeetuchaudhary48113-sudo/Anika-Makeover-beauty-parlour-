@@ -147,6 +147,60 @@
         "imageUrl": { "type": "string" }
       },
       "required": ["title", "description"]
+    },
+    "InstagramSettings": {
+      "title": "InstagramSettings",
+      "description": "Instagram profile settings",
+      "type": "object",
+      "properties": {
+        "profileUrl": { "type": "string" },
+        "followButtonLink": { "type": "string" },
+        "username": { "type": "string" },
+        "heading": { "type": "string" },
+        "description": { "type": "string" }
+      },
+      "required": ["profileUrl", "followButtonLink", "username", "heading", "description"]
+    },
+    "InstagramPost": {
+      "title": "InstagramPost",
+      "description": "Instagram feed posts with likes and comments",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "image": { "type": "string" },
+        "title": { "type": "string" },
+        "likes": { "type": "string" },
+        "comments": { "type": "string" },
+        "order": { "type": "number" },
+        "visible": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["image", "title"]
+    },
+    "InstagramVideo": {
+      "title": "InstagramVideo",
+      "description": "Instagram uploaded videos",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "video": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["video"]
+    },
+    "InstagramReel": {
+      "title": "InstagramReel",
+      "description": "Instagram reels with description",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "video": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["video", "title"]
     }
   },
   "firestore": {
@@ -189,6 +243,22 @@
     "offers/{offerId}": {
       "schema": "Offer",
       "description": "Seasonal promotional discount codes"
+    },
+    "instagramSettings/main": {
+      "schema": "InstagramSettings",
+      "description": "Instagram Profile UI and links settings"
+    },
+    "instagramPosts/{postId}": {
+      "schema": "InstagramPost",
+      "description": "Instagram photo feed posts"
+    },
+    "instagramVideos/{videoId}": {
+      "schema": "InstagramVideo",
+      "description": "Instagram playable videos"
+    },
+    "instagramReels/{reelId}": {
+      "schema": "InstagramReel",
+      "description": "Instagram reels with descriptions"
     }
   }
 }

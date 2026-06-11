@@ -266,3 +266,38 @@ export interface Offer {
   imageUrl: string;
 }
 
+export interface InstagramSettings {
+  profileUrl: string;
+  followButtonLink: string;
+  username: string;
+  heading: string;
+  description: string;
+}
+
+export interface InstagramPost {
+  id: string;
+  image: string;
+  title: string;
+  likes: string;
+  comments: string;
+  order: number;
+  visible: boolean;
+  createdAt: string;
+}
+
+export interface InstagramVideo {
+  id: string;
+  video: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface InstagramReel {
+  id: string;
+  video: string;
+  title: string;
+  description: string;
+  createdAt: string;
+}
+
+

@@ -1,7 +1,75 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Default catch-all rule (fallback)
     match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Public reads for all salon content to ensure visitors see the website elements
+    match /appointments/{appointmentId} {
+      allow read, write: if true;
+    }
+
+    match /services/{serviceId} {
+      allow read, write: if true;
+    }
+
+    match /gallery/{galleryId} {
+      allow read, write: if true;
+    }
+
+    match /reviews/{reviewId} {
+      allow read, write: if true;
+    }
+
+    match /banners/{bannerId} {
+      allow read, write: if true;
+    }
+
+    match /owner/{ownerId} {
+      allow read, write: if true;
+    }
+
+    match /settings/{settingsId} {
+      allow read, write: if true;
+    }
+
+    match /contact/{contactId} {
+      allow read, write: if true;
+    }
+
+    match /socialLinks/{socialLinkId} {
+      allow read, write: if true;
+    }
+
+    match /offers/{offerId} {
+      allow read, write: if true;
+    }
+
+    match /welcomeBanner/{welcomeBannerId} {
+      allow read, write: if true;
+    }
+
+    match /heroBanner/{heroBannerId} {
+      allow read, write: if true;
+    }
+
+    // Instagram collections rule mapping
+    match /instagramSettings/{id} {
+      allow read, write: if true;
+    }
+
+    match /instagramPosts/{id} {
+      allow read, write: if true;
+    }
+
+    match /instagramVideos/{id} {
+      allow read, write: if true;
+    }
+
+    match /instagramReels/{id} {
       allow read, write: if true;
     }
   }
